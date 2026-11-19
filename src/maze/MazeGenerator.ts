@@ -31,6 +31,12 @@ const KEY_METADATA: Array<{ label: string; code: string }> = [
 ];
 
 const DOOR_LABELS: Record<MapId, string[]> = {
+  pelabuhan: [
+    'Palang Dermaga Barat',
+    'Pintu Pos Bea Cukai',
+    'Gerbang Mercusuar Timur',
+    'Pintu Gudang Tali',
+  ],
   gudang: [
     'Pos Pemeriksaan Gudang',
     'Pintu Arsip Administrasi',
@@ -97,7 +103,7 @@ function fillRect(
 
 function assignRegions(regionGrid: Uint8Array, W: number): void {
   const half = Math.floor(W / 2);
-  const belt = W - 18;
+  const belt = W < 80 ? W - 11 : W - 18;
   for (let y = 0; y < W; y++) {
     for (let x = 0; x < W; x++) {
       let r = 0;
@@ -412,7 +418,21 @@ function decorateFloorGeometry(
   degree: Uint8Array,
   rng: () => number
 ): void {
-  if (mapId === 'gudang') {
+  if (mapId === 'pelabuhan') {
+    // Open coastal harbor courtyards & wide junction plazas for relaxed 3-5 min navigation
+    const mid = Math.floor(W / 2) - 4;
+    carveRect(grid, W, mid, mid, 8, 8);
+    carveRect(grid, W, 13, 13, 6, 6);
+    carveRect(grid, W, W - 23, 13, 6, 6);
+    carveRect(grid, W, 13, W - 23, 6, 6);
+    for (let lx = 0; lx < logicalN; lx++) {
+      for (let ly = 0; ly < logicalN; ly++) {
+        if (degree[ly * logicalN + lx] >= 3) {
+          carveRect(grid, W, 1 + lx * STRIDE, 1 + ly * STRIDE, 3, 3);
+        }
+      }
+    }
+  } else if (mapId === 'gudang') {
     for (let lx = 0; lx < logicalN; lx++) {
       for (let ly = 0; ly < logicalN; ly++) {
         const px = 1 + lx * STRIDE;
@@ -571,7 +591,15 @@ export function generateMaze(
   const F = def.floors;
   const logicalN = Math.floor((W - 4) / STRIDE);
   const mapSeedOffset =
-    mapId === 'gudang' ? 0 : mapId === 'hutan' ? 313 : mapId === 'pedesaan' ? 719 : 1291;
+    mapId === 'pelabuhan'
+      ? 173
+      : mapId === 'gudang'
+      ? 0
+      : mapId === 'hutan'
+      ? 313
+      : mapId === 'pedesaan'
+      ? 719
+      : 1291;
   const rng = createRng(seed + mapSeedOffset);
 
   const floorGrids = Array.from({ length: F }, () => new Uint8Array(W * W).fill(1));
@@ -579,9 +607,21 @@ export function generateMaze(
   const reservedByFloor = Array.from({ length: F }, () => new Set<number>());
 
   const mode =
-    mapId === 'hutan' ? 'growing' : mapId === 'pedesaan' ? 'blocks' : 'dfs';
+    mapId === 'hutan' || mapId === 'pelabuhan'
+      ? 'growing'
+      : mapId === 'pedesaan'
+      ? 'blocks'
+      : 'dfs';
   const loopChance =
-    mapId === 'hutan' ? 0.42 : mapId === 'pedesaan' ? 0.48 : mapId === 'gedung' ? 0.28 : 0.28;
+    mapId === 'pelabuhan'
+      ? 0.54
+      : mapId === 'hutan'
+      ? 0.42
+      : mapId === 'pedesaan'
+      ? 0.48
+      : mapId === 'gedung'
+      ? 0.28
+      : 0.28;
 
   for (let f = 0; f < F; f++) {
     assignRegions(floorRegionGrids[f], W);
@@ -784,6 +824,8 @@ export function generateMaze(
   const keys: KeyNode[] = [];
   const placedKeys: Array<{ floor: number; x: number; y: number }> = [];
 
+  const minKeySpawnDist = W < 72 ? 12 : 18;
+  const minKeyGap = W < 72 ? 9 : 14;
   for (let k = 0; k < TOTAL_KEYS; k++) {
     const { floor: tf, region: targetReg } = desiredKeyTargets[k];
     const distArr = distsFromSpawn[tf];
@@ -792,10 +834,10 @@ export function generateMaze(
 
     const pool = floorWalkableCells[tf].filter(([x, y]) => {
       const i = idxW(x, y, W);
-      if (resSet.has(i) || distArr[i] < 18) return false;
+      if (resSet.has(i) || distArr[i] < minKeySpawnDist) return false;
       if (regionIndexToId(regGrid[i]) !== targetReg) return false;
       return placedKeys.every(
-        (pk) => pk.floor !== tf || Math.hypot(x - pk.x, y - pk.y) >= 14
+        (pk) => pk.floor !== tf || Math.hypot(x - pk.x, y - pk.y) >= minKeyGap
       );
     });
 
@@ -806,9 +848,9 @@ export function generateMaze(
             const i = idxW(x, y, W);
             return (
               !resSet.has(i) &&
-              distArr[i] >= 14 &&
+              distArr[i] >= Math.max(10, minKeySpawnDist - 4) &&
               placedKeys.every(
-                (pk) => pk.floor !== tf || Math.hypot(x - pk.x, y - pk.y) >= 8
+                (pk) => pk.floor !== tf || Math.hypot(x - pk.x, y - pk.y) >= 7
               )
             );
           });
@@ -833,6 +875,8 @@ export function generateMaze(
   // Place Guard NPCs scaled per map difficulty
   const regionCycle: RegionId[] = ['depot', 'admin', 'service', 'outer'];
   const guards: Array<{ floor: number; x: number; y: number; region: RegionId }> = [];
+  const minGuardSpawnDist = W < 72 ? 12 : 16;
+  const minGuardGap = W < 72 ? 6 : 8;
   for (let g = 0; g < def.guardCount; g++) {
     const gf = F > 1 ? g % F : 0;
     const targetReg = regionCycle[g % regionCycle.length];
@@ -842,17 +886,17 @@ export function generateMaze(
 
     const pool = floorWalkableCells[gf].filter(([x, y]) => {
       const i = idxW(x, y, W);
-      if (resSet.has(i) || distArr[i] < 16) return false;
+      if (resSet.has(i) || distArr[i] < minGuardSpawnDist) return false;
       if (regionIndexToId(regGrid[i]) !== targetReg) return false;
       return guards.every(
-        (og) => og.floor !== gf || Math.hypot(x - og.x, y - og.y) >= 8
+        (og) => og.floor !== gf || Math.hypot(x - og.x, y - og.y) >= minGuardGap
       );
     });
     const finalPool =
       pool.length > 0
         ? pool
         : floorWalkableCells[gf].filter(
-            ([x, y]) => !resSet.has(idxW(x, y, W)) && distArr[idxW(x, y, W)] >= 14
+            ([x, y]) => !resSet.has(idxW(x, y, W)) && distArr[idxW(x, y, W)] >= 12
           );
     const [gx, gy] = finalPool[Math.floor(rng() * finalPool.length)];
     resSet.add(idxW(gx, gy, W));

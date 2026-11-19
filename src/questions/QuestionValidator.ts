@@ -3,7 +3,7 @@ import {
   MULTIPLE_CHOICE_QUESTIONS,
   TRUE_FALSE_QUESTIONS,
 } from '../data/ww2Questions';
-import type { MCQQuestion, TrueFalseQuestion } from '../types/game';
+import type { MCQQuestion, QuizTopicId, TrueFalseQuestion } from '../types/game';
 
 export interface QuestionBankValidationResult {
   ok: boolean;
@@ -13,7 +13,36 @@ export interface QuestionBankValidationResult {
     trueFalse: number;
     total: number;
     categories: Record<string, number>;
+    categoryBreakdown: Record<string, { multipleChoice: number; trueFalse: number; total: number }>;
   };
+}
+
+export function getTopicCounts(
+  mcList: MCQQuestion[] = MULTIPLE_CHOICE_QUESTIONS,
+  tfList: TrueFalseQuestion[] = TRUE_FALSE_QUESTIONS
+): Record<QuizTopicId, { multipleChoice: number; trueFalse: number; total: number }> {
+  const counts: Record<QuizTopicId, { multipleChoice: number; trueFalse: number; total: number }> = {
+    ALL: { multipleChoice: mcList.length, trueFalse: tfList.length, total: mcList.length + tfList.length },
+    'WWII-Europe': { multipleChoice: 0, trueFalse: 0, total: 0 },
+    'Pacific-War': { multipleChoice: 0, trueFalse: 0, total: 0 },
+    'Indonesia-Occupation': { multipleChoice: 0, trueFalse: 0, total: 0 },
+    'End-of-War': { multipleChoice: 0, trueFalse: 0, total: 0 },
+  };
+  for (const q of mcList) {
+    const key = q.category as QuizTopicId;
+    if (counts[key]) {
+      counts[key].multipleChoice += 1;
+      counts[key].total += 1;
+    }
+  }
+  for (const q of tfList) {
+    const key = q.category as QuizTopicId;
+    if (counts[key]) {
+      counts[key].trueFalse += 1;
+      counts[key].total += 1;
+    }
+  }
+  return counts;
 }
 
 export function validateQuestionBank(
@@ -24,6 +53,7 @@ export function validateQuestionBank(
   const seenIds = new Set<string>();
   const seenText = new Set<string>();
   const categories: Record<string, number> = {};
+  const categoryBreakdown: Record<string, { multipleChoice: number; trueFalse: number; total: number }> = {};
 
   if (mcList.length < 24) {
     errors.push(`Multiple choice minimal 24 soal, tersedia ${mcList.length}`);
@@ -46,6 +76,9 @@ export function validateQuestionBank(
 
     if (!q.category.trim()) errors.push(`Kategori kosong pada ${q.id}`);
     categories[q.category] = (categories[q.category] || 0) + 1;
+    categoryBreakdown[q.category] ??= { multipleChoice: 0, trueFalse: 0, total: 0 };
+    categoryBreakdown[q.category].multipleChoice += 1;
+    categoryBreakdown[q.category].total += 1;
 
     if (!Array.isArray(q.options) || q.options.length !== 4) {
       errors.push(`Jumlah opsi bukan 4 pada ${q.id}`);
@@ -81,6 +114,9 @@ export function validateQuestionBank(
 
     if (!q.category.trim()) errors.push(`Kategori kosong pada ${q.id}`);
     categories[q.category] = (categories[q.category] || 0) + 1;
+    categoryBreakdown[q.category] ??= { multipleChoice: 0, trueFalse: 0, total: 0 };
+    categoryBreakdown[q.category].trueFalse += 1;
+    categoryBreakdown[q.category].total += 1;
 
     if (typeof q.answerBoolean !== 'boolean') {
       errors.push(`answerBoolean tidak valid pada ${q.id}`);
@@ -100,8 +136,11 @@ export function validateQuestionBank(
     'End-of-War',
   ];
   for (const cat of requiredCategories) {
-    if (!categories[cat] || categories[cat] < 4) {
-      errors.push(`Kategori ${cat} kurang soal (${categories[cat] || 0})`);
+    const info = categoryBreakdown[cat];
+    if (!info || info.multipleChoice < 10 || info.trueFalse < 8) {
+      errors.push(
+        `Materi ${cat} kurang soal (MCQ ${info?.multipleChoice || 0}/10, Benar-Salah ${info?.trueFalse || 0}/8)`
+      );
     }
   }
 
@@ -113,6 +152,7 @@ export function validateQuestionBank(
       trueFalse: tfList.length,
       total: mcList.length + tfList.length,
       categories,
+      categoryBreakdown,
     },
   };
 }

@@ -347,7 +347,9 @@ export class MazeSceneController {
 
     // Map-specific sky & fog atmosphere
     const bgHex =
-      mapId === 'hutan'
+      mapId === 'pelabuhan'
+        ? 0x0c1926
+        : mapId === 'hutan'
         ? 0x07130e
         : mapId === 'pedesaan'
         ? 0x15131d
@@ -355,13 +357,23 @@ export class MazeSceneController {
         ? 0x0e1118
         : 0x0c1017;
     const fogDensity =
-      mapId === 'hutan' ? 0.032 : mapId === 'pedesaan' ? 0.026 : mapId === 'gedung' ? 0.038 : 0.036;
+      mapId === 'pelabuhan'
+        ? 0.019
+        : mapId === 'hutan'
+        ? 0.032
+        : mapId === 'pedesaan'
+        ? 0.026
+        : mapId === 'gedung'
+        ? 0.038
+        : 0.036;
     this.scene.background = new THREE.Color(bgHex);
     this.scene.fog = new THREE.FogExp2(bgHex, fogDensity);
 
     const worldSpan = W * CELL_SIZE;
     const baseFloorTex =
-      mapId === 'hutan'
+      mapId === 'pelabuhan'
+        ? this.textures.floorHarbor
+        : mapId === 'hutan'
         ? this.textures.floorForest
         : mapId === 'pedesaan'
         ? this.textures.floorVillage
@@ -465,7 +477,14 @@ export class MazeSceneController {
     this.sharedDisposables.push(wallGeo);
 
     const regionWallMaps =
-      mapId === 'hutan'
+      mapId === 'pelabuhan'
+        ? [
+            this.textures.wallHarbor,
+            this.textures.wallAdmin,
+            this.textures.wallDepot,
+            this.textures.wallOuter,
+          ]
+        : mapId === 'hutan'
         ? [
             this.textures.wallForest,
             this.textures.wallForest,
@@ -519,20 +538,27 @@ export class MazeSceneController {
       this.sharedDisposables.push(mat);
     });
 
-    // Open-sky tree canopies (Hutan) & terracotta roofs (Pedesaan) atop wall tops
+    // Open-sky tree canopies (Hutan), terracotta roofs (Pedesaan), or harbor parapet trims (Pelabuhan)
     if (def.openSky && allWallCoords.length > 0) {
       const capGeo =
         mapId === 'hutan'
           ? new THREE.BoxGeometry(CELL_SIZE * 1.16, 1.35, CELL_SIZE * 1.16)
+          : mapId === 'pelabuhan'
+          ? new THREE.BoxGeometry(CELL_SIZE * 1.04, 0.28, CELL_SIZE * 1.04)
           : new THREE.BoxGeometry(CELL_SIZE * 1.06, 0.72, CELL_SIZE * 1.06);
       const capMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
-        map: mapId === 'hutan' ? this.textures.foliageLeaf : this.textures.roofTerracotta,
+        map:
+          mapId === 'hutan'
+            ? this.textures.foliageLeaf
+            : mapId === 'pelabuhan'
+            ? this.textures.wallOuter
+            : this.textures.roofTerracotta,
         roughness: 0.9,
         metalness: 0.03,
       });
       const capInst = new THREE.InstancedMesh(capGeo, capMat, allWallCoords.length);
-      const capY = wallH + (mapId === 'hutan' ? 0.62 : 0.34);
+      const capY = wallH + (mapId === 'hutan' ? 0.62 : mapId === 'pelabuhan' ? 0.14 : 0.34);
       allWallCoords.forEach(([cx, cy], idx) => {
         _pos.set((cx + 0.5) * CELL_SIZE, capY, (cy + 0.5) * CELL_SIZE);
         _quat.identity();

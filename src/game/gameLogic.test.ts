@@ -11,13 +11,14 @@ import {
   PLAYER_SPEED,
   SPRINT_SPEED_MULT,
 } from '../maze/MazeConfig';
-import { validateQuestionBank } from '../questions/QuestionValidator';
+import { CATEGORY_LABELS } from '../data/ww2Questions';
+import { getTopicCounts, validateQuestionBank } from '../questions/QuestionValidator';
 import { QuestionManager } from '../questions/QuestionManager';
 import { moveWithCollision } from '../player/Collision';
 import { applyQuizOutcome, calculateScore, getRankForScore } from '../gameplay/ScoreManager';
 import { buildGuardBlockedMask, stepGuard } from '../guards/GuardAI';
 import { createRng } from '../maze/Pathfinding';
-import type { GuardNode } from '../types/game';
+import type { GuardNode, QuizTopicId } from '../types/game';
 
 test('96x96 expanded maze (>2x area) generates deterministically and passes all MazeValidator checks', () => {
   const m1 = generateMaze(DEFAULT_SEED);
@@ -44,7 +45,8 @@ test('96x96 expanded maze (>2x area) generates deterministically and passes all 
   assert.equal(result.stats.narrowCorridorViolations, 0);
 });
 
-test('All 4 maps (gudang, hutan, pedesaan, gedung 3 floors) generate deterministically and pass MazeValidator', () => {
+test('All 5 maps (pelabuhan, gudang, hutan, pedesaan, gedung 3 floors) generate deterministically and pass MazeValidator', () => {
+  assert.equal(MAP_ORDER.length, 5);
   for (const mapId of MAP_ORDER) {
     const def = MAP_CATALOG[mapId];
     const layout = generateMaze(DEFAULT_SEED, mapId);
@@ -64,6 +66,20 @@ test('All 4 maps (gudang, hutan, pedesaan, gedung 3 floors) generate determinist
     assert.equal(res.stats.independentExitRoutes, 3, `${mapId} should have 3 independent escape routes`);
     assert.equal(res.stats.narrowCorridorViolations, 0, `${mapId} must have wide >=2-cell corridors`);
   }
+});
+
+test('Pelabuhan map is compact (56x56), Mudah difficulty, and tuned for 3-5 minute playtime', () => {
+  const def = MAP_CATALOG.pelabuhan;
+  const pelabuhan = generateMaze(DEFAULT_SEED, 'pelabuhan');
+  assert.equal(def.difficultyLabel, 'Mudah');
+  assert.equal(def.durationLabel, '3–5 Mnt');
+  assert.equal(pelabuhan.width, 56);
+  assert.equal(pelabuhan.floors, 1);
+  assert.equal(pelabuhan.guards.length, 6);
+  assert.equal(pelabuhan.traps.length, 8);
+  assert.ok(def.guardSpeedMult < 0.85, 'Easy map guards should move significantly slower');
+  assert.ok(def.encounterTimeDelta > 0, 'Easy map should grant extra quiz answer time');
+  assert.ok(pelabuhan.walkableCells.length < 2200, 'Compact walkable area for 3-5 min playtime');
 });
 
 test('Gedung 3-floor map has 4 staircases connecting floors 1-2-3 and keys on every floor', () => {
@@ -100,11 +116,25 @@ test('7 keys are distributed across all 4 distinct regions', () => {
   assert.ok(regions.size >= 4, `Expected keys in all 4 regions, got ${[...regions].join(', ')}`);
 });
 
-test('WWII question bank passes strict validation (MCQ >= 24, TF >= 16, valid sources)', () => {
+test('WWII question bank passes strict validation (MCQ >= 48, TF >= 40, >= 12/10 per topic, valid sources)', () => {
   const res = validateQuestionBank();
   assert.equal(res.ok, true, `Question bank errors: ${res.errors.join('; ')}`);
-  assert.ok(res.counts.multipleChoice >= 24);
-  assert.ok(res.counts.trueFalse >= 16);
+  assert.ok(res.counts.multipleChoice >= 48);
+  assert.ok(res.counts.trueFalse >= 40);
+  assert.ok(res.counts.total >= 88);
+
+  const topicCounts = getTopicCounts();
+  assert.equal(topicCounts.ALL.total, res.counts.total);
+  const topics: QuizTopicId[] = [
+    'WWII-Europe',
+    'Pacific-War',
+    'Indonesia-Occupation',
+    'End-of-War',
+  ];
+  for (const t of topics) {
+    assert.ok(topicCounts[t].multipleChoice >= 12, `${t} should have at least 12 MCQ`);
+    assert.ok(topicCounts[t].trueFalse >= 10, `${t} should have at least 10 True/False`);
+  }
 });
 
 test('QuestionManager shuffles MCQ options without losing correct answer and prefers TF for guards', () => {
@@ -118,6 +148,7 @@ test('QuestionManager shuffles MCQ options without losing correct answer and pre
     assert.equal(q.options.length, 4);
     assert.ok(q.correctIndex >= 0 && q.correctIndex <= 3);
     assert.ok(q.explanation.length >= 10);
+    assert.ok(q.sourceIds.length >= 1);
     assert.ok(!seenIds.has(q.questionId), `Repeated question before pool exhausted: ${q.questionId}`);
     seenIds.add(q.questionId);
     positions.add(q.correctIndex);
@@ -129,6 +160,35 @@ test('QuestionManager shuffles MCQ options without losing correct answer and pre
   assert.equal(guardQ.questionType, 'true_false');
   assert.deepEqual(guardQ.options, ['Benar', 'Salah']);
   assert.equal(guardQ.timeLimit, 10);
+});
+
+test('QuestionManager filters both door MCQ and guard TF questions strictly by selected topic', () => {
+  const specificTopics: Array<Exclude<QuizTopicId, 'ALL'>> = [
+    'WWII-Europe',
+    'Pacific-War',
+    'Indonesia-Occupation',
+    'End-of-War',
+  ];
+  for (const topic of specificTopics) {
+    const qm = new QuestionManager(1942);
+    qm.reset(2026, topic);
+    assert.equal(qm.getTopic(), topic);
+    const expectedLabel = CATEGORY_LABELS[topic];
+    const seenMc = new Set<string>();
+    for (let i = 0; i < 12; i++) {
+      const q = qm.pickForDoor(i % 4, false);
+      assert.equal(q.category, expectedLabel, `Door quiz leaked wrong topic for ${topic}`);
+      assert.ok(!seenMc.has(q.questionId), `Duplicate MCQ in ${topic} before exhausting 12-question pool`);
+      seenMc.add(q.questionId);
+    }
+    const seenTf = new Set<string>();
+    for (let i = 0; i < 10; i++) {
+      const q = qm.pickForGuard(i % 5, 10);
+      assert.equal(q.category, expectedLabel, `Guard quiz leaked wrong topic for ${topic}`);
+      assert.ok(!seenTf.has(q.questionId), `Duplicate TF in ${topic} before exhausting 10-question pool`);
+      seenTf.add(q.questionId);
+    }
+  }
 });
 
 test('Collision and dodge movement never tunnel through walls or closed quiz doors', () => {

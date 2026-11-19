@@ -36,11 +36,13 @@ export interface TextureBundle {
   wallForest: THREE.CanvasTexture;
   wallVillage: THREE.CanvasTexture;
   wallBuilding: THREE.CanvasTexture;
+  wallHarbor: THREE.CanvasTexture;
   wallBump: THREE.CanvasTexture;
   floorConcrete: THREE.CanvasTexture;
   floorForest: THREE.CanvasTexture;
   floorVillage: THREE.CanvasTexture;
   floorBuilding: THREE.CanvasTexture;
+  floorHarbor: THREE.CanvasTexture;
   floorBump: THREE.CanvasTexture;
   ceilingRafters: THREE.CanvasTexture;
   roofTerracotta: THREE.CanvasTexture;
@@ -194,6 +196,26 @@ export function createProceduralTextures(maxAniso: number): TextureBundle {
   const wallBuilding = finalizeTexture(wbdC, true, maxAniso);
   all.push(wallBuilding);
 
+  // 4e. Harbor Outpost Wall: weathered slate-blue coastal masonry + timber beam
+  const [whC, wh] = makePixelCanvas(32);
+  wh.fillStyle = '#4c5f70';
+  wh.fillRect(0, 0, 32, 22);
+  for (let row = 0; row < 3; row++) {
+    const y = row * 7;
+    wh.fillStyle = '#384857';
+    wh.fillRect(0, y, 32, 1);
+    for (let x = (row % 2) * 8; x < 32; x += 16) {
+      wh.fillStyle = '#5c7185';
+      wh.fillRect(x + 1, y + 1, 14, 5);
+    }
+  }
+  wh.fillStyle = '#4d3a28';
+  wh.fillRect(0, 21, 32, 3);
+  wh.fillStyle = '#37424c';
+  wh.fillRect(0, 24, 32, 8);
+  const wallHarbor = finalizeTexture(whC, true, maxAniso);
+  all.push(wallHarbor);
+
   // 5. Wall bump map (grayscale)
   const [wbC, wb] = makePixelCanvas(32);
   wb.fillStyle = '#909090';
@@ -265,6 +287,22 @@ export function createProceduralTextures(maxAniso: number): TextureBundle {
   fbld.fillRect(0, 15, 32, 2);
   const floorBuilding = finalizeTexture(fbldC, true, maxAniso);
   all.push(floorBuilding);
+
+  // 6e. Harbor Floor: weathered timber pier planks with iron bolts
+  const [fhC, fh] = makePixelCanvas(32);
+  fh.fillStyle = '#4a3a2b';
+  fh.fillRect(0, 0, 32, 32);
+  for (let y = 0; y < 32; y += 8) {
+    fh.fillStyle = y % 16 === 0 ? '#574534' : '#4f3f2f';
+    fh.fillRect(0, y + 1, 32, 6);
+    fh.fillStyle = '#2d2218';
+    fh.fillRect(0, y, 32, 1);
+    fh.fillStyle = '#3a3e44';
+    fh.fillRect(3, y + 3, 1, 1);
+    fh.fillRect(28, y + 3, 1, 1);
+  }
+  const floorHarbor = finalizeTexture(fhC, true, maxAniso);
+  all.push(floorHarbor);
 
   const [fbC, fb] = makePixelCanvas(32);
   fb.fillStyle = '#9a9a9a';
@@ -352,11 +390,13 @@ export function createProceduralTextures(maxAniso: number): TextureBundle {
     wallForest,
     wallVillage,
     wallBuilding,
+    wallHarbor,
     wallBump,
     floorConcrete,
     floorForest,
     floorVillage,
     floorBuilding,
+    floorHarbor,
     floorBump,
     ceilingRafters,
     roofTerracotta,

@@ -217,7 +217,11 @@ class AudioManagerImpl {
         const src = this.ctx.createBufferSource();
         src.buffer = this.longNoiseBuffer;
         const filter = this.ctx.createBiquadFilter();
-        const isWindy = mapId === 'hutan' || mapId === 'pedesaan' || region === 'outer';
+        const isWindy =
+          mapId === 'pelabuhan' ||
+          mapId === 'hutan' ||
+          mapId === 'pedesaan' ||
+          region === 'outer';
         filter.type = isWindy ? 'bandpass' : 'lowpass';
         const baseFreq = isWindy
           ? 410 + Math.random() * 240
@@ -266,6 +270,18 @@ class AudioManagerImpl {
         // Soft footsteps on forest leaves
         this.noiseBand(t, 0.07, 0.025, 1100, 'bandpass', dest);
         this.noiseBand(t + 0.45, 0.07, 0.02, 980, 'bandpass', dest);
+      }
+      return;
+    }
+
+    if (mapId === 'pelabuhan') {
+      const r = Math.random();
+      if (r < 0.3) {
+        // Distant harbor buoy bell
+        this.tone(520, t, 0.45, 'sine', 0.014, dest, 512);
+      } else if (r < 0.6) {
+        // Soft wooden dock creak / wave lap
+        this.noiseBand(t, 0.28, 0.022, 320, 'lowpass', dest);
       }
       return;
     }

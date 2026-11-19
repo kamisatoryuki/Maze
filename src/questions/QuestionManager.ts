@@ -4,7 +4,7 @@ import {
   TRUE_FALSE_QUESTIONS,
 } from '../data/ww2Questions';
 import { createRng } from '../maze/Pathfinding';
-import type { ActiveQuiz, MCQQuestion, TrueFalseQuestion } from '../types/game';
+import type { ActiveQuiz, MCQQuestion, QuizTopicId, TrueFalseQuestion } from '../types/game';
 
 export class QuestionManager {
   private rng: () => number;
@@ -13,22 +13,52 @@ export class QuestionManager {
   private posBag: number[] = [];
   private mcPool: MCQQuestion[];
   private tfPool: TrueFalseQuestion[];
+  private topic: QuizTopicId;
 
   constructor(
     seed = 1942,
     mcPool: MCQQuestion[] = MULTIPLE_CHOICE_QUESTIONS,
-    tfPool: TrueFalseQuestion[] = TRUE_FALSE_QUESTIONS
+    tfPool: TrueFalseQuestion[] = TRUE_FALSE_QUESTIONS,
+    topic: QuizTopicId = 'ALL'
   ) {
     this.rng = createRng(seed + 701);
     this.mcPool = mcPool;
     this.tfPool = tfPool;
+    this.topic = topic;
   }
 
-  reset(seed = Date.now()): void {
+  setTopic(topic: QuizTopicId): void {
+    if (this.topic !== topic) {
+      this.topic = topic;
+      this.seenMc.clear();
+      this.seenTf.clear();
+    }
+  }
+
+  getTopic(): QuizTopicId {
+    return this.topic;
+  }
+
+  reset(seed = Date.now(), topic?: QuizTopicId): void {
     this.rng = createRng(seed);
     this.seenMc.clear();
     this.seenTf.clear();
     this.posBag = [];
+    if (topic !== undefined) {
+      this.topic = topic;
+    }
+  }
+
+  private getActiveMcPool(): MCQQuestion[] {
+    if (this.topic === 'ALL') return this.mcPool;
+    const filtered = this.mcPool.filter((q) => q.category === this.topic);
+    return filtered.length > 0 ? filtered : this.mcPool;
+  }
+
+  private getActiveTfPool(): TrueFalseQuestion[] {
+    if (this.topic === 'ALL') return this.tfPool;
+    const filtered = this.tfPool.filter((q) => q.category === this.topic);
+    return filtered.length > 0 ? filtered : this.tfPool;
   }
 
   private nextTargetPosition(): number {
@@ -57,10 +87,12 @@ export class QuestionManager {
   }
 
   private buildMcqQuiz(kind: 'door' | 'guard', doorIndex?: number): ActiveQuiz {
-    if (this.seenMc.size >= this.mcPool.length) {
+    const pool = this.getActiveMcPool();
+    let available = pool.filter((q) => !this.seenMc.has(q.id));
+    if (available.length === 0) {
       this.seenMc.clear();
+      available = pool;
     }
-    const available = this.mcPool.filter((q) => !this.seenMc.has(q.id));
     const q = available[Math.floor(this.rng() * available.length)];
     this.seenMc.add(q.id);
 
@@ -108,10 +140,12 @@ export class QuestionManager {
     guardIndex?: number,
     timeLimit = 10
   ): ActiveQuiz {
-    if (this.seenTf.size >= this.tfPool.length) {
+    const pool = this.getActiveTfPool();
+    let available = pool.filter((q) => !this.seenTf.has(q.id));
+    if (available.length === 0) {
       this.seenTf.clear();
+      available = pool;
     }
-    const available = this.tfPool.filter((q) => !this.seenTf.has(q.id));
     const q = available[Math.floor(this.rng() * available.length)];
     this.seenTf.add(q.id);
 

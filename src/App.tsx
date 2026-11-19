@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DIFFICULTY_PROFILES } from './guards/GuardAI';
 import { applyQuizOutcome, calculateScore, getRankForScore } from './gameplay/ScoreManager';
+import { TOPIC_OPTIONS } from './data/ww2Questions';
 import { DEFAULT_SEED, MAP_CATALOG, MAX_STAMINA, TOTAL_KEYS } from './maze/MazeConfig';
 import { QuestionManager } from './questions/QuestionManager';
 import { validateQuestionBank } from './questions/QuestionValidator';
@@ -28,6 +29,7 @@ import type {
   HudSnapshot,
   LeaderboardEntry,
   MapId,
+  QuizTopicId,
   RunSummary,
   SaveStateV2,
 } from './types/game';
@@ -84,6 +86,7 @@ export default function App() {
 
   const [settings, setSettings] = useState<GameSettings>(() => loadSettings());
   const [selectedMap, setSelectedMap] = useState<MapId>('gudang');
+  const [selectedTopic, setSelectedTopic] = useState<QuizTopicId>('ALL');
   const [phase, setPhase] = useState<GamePhase>('title');
   const [subModal, setSubModal] = useState<SubModal>('none');
   const [hud, setHud] = useState<HudSnapshot>(INITIAL_HUD);
@@ -105,6 +108,8 @@ export default function App() {
   const phaseRef = useRef<GamePhase>('title');
   const settingsRef = useRef<GameSettings>(settings);
   const selectedMapRef = useRef<MapId>(selectedMap);
+  const selectedTopicRef = useRef<QuizTopicId>(selectedTopic);
+  const activeTopicRef = useRef<QuizTopicId>('ALL');
   const activeQuizRef = useRef<ActiveQuiz | null>(null);
   const mapExpandedRef = useRef(false);
   const storyBookOpenRef = useRef(false);
@@ -112,6 +117,7 @@ export default function App() {
   phaseRef.current = phase;
   settingsRef.current = settings;
   selectedMapRef.current = selectedMap;
+  selectedTopicRef.current = selectedTopic;
   activeQuizRef.current = activeQuiz;
   mapExpandedRef.current = mapExpanded;
   storyBookOpenRef.current = storyBookOpen;
@@ -181,6 +187,7 @@ export default function App() {
         won,
         mapId: activeMap,
         mapName: MAP_CATALOG[activeMap].name,
+        topicId: activeTopicRef.current,
         score,
         rank: getRankForScore(score),
         elapsedTime: ctrl.elapsedTime,
@@ -216,8 +223,12 @@ export default function App() {
 
       syncPhase('playing');
       ctrl.requestPointerLock();
-      saveGameState(ctrl.exportSaveState());
-      setSavedGame(ctrl.exportSaveState());
+      const savePayload: SaveStateV2 = {
+        ...ctrl.exportSaveState(),
+        topicId: activeTopicRef.current,
+      };
+      saveGameState(savePayload);
+      setSavedGame(savePayload);
     },
     [finishRun, syncPhase]
   );
@@ -384,7 +395,10 @@ export default function App() {
         syncPhase('paused');
         const ctrl = controllerRef.current;
         if (ctrl) {
-          const s = ctrl.exportSaveState();
+          const s: SaveStateV2 = {
+            ...ctrl.exportSaveState(),
+            topicId: activeTopicRef.current,
+          };
           saveGameState(s);
           setSavedGame(s);
         }
@@ -409,8 +423,9 @@ export default function App() {
       showToast('Baca Buku Catatan di meja [E] sebelum menelusuri labirin!');
     },
     onAutosave: (save: SaveStateV2) => {
-      saveGameState(save);
-      setSavedGame(save);
+      const withTopic: SaveStateV2 = { ...save, topicId: activeTopicRef.current };
+      saveGameState(withTopic);
+      setSavedGame(withTopic);
     },
     onWebGLError: (reason: string) => setWebglError(reason),
   });
@@ -439,20 +454,33 @@ export default function App() {
     });
     controllerRef.current = controller;
 
-    // Support ?autostart=1&map=gudang|hutan|pedesaan|gedung testability parameters
+    // Support ?autostart=1&map=pelabuhan|gudang|hutan|pedesaan|gedung&topic=... testability parameters
     const params = new URLSearchParams(window.location.search);
     const paramMapRaw = params.get('map') as MapId | null;
     const validParamMap: MapId | null =
       paramMapRaw && Object.prototype.hasOwnProperty.call(MAP_CATALOG, paramMapRaw)
         ? paramMapRaw
         : null;
+    const paramTopicRaw = params.get('topic') as QuizTopicId | null;
+    const validParamTopic: QuizTopicId | null =
+      paramTopicRaw && TOPIC_OPTIONS.some((t) => t.id === paramTopicRaw)
+        ? paramTopicRaw
+        : null;
+
     if (validParamMap) {
       setSelectedMap(validParamMap);
       selectedMapRef.current = validParamMap;
     }
+    if (validParamTopic) {
+      setSelectedTopic(validParamTopic);
+      selectedTopicRef.current = validParamTopic;
+      activeTopicRef.current = validParamTopic;
+    }
     if (params.get('autostart') === '1') {
       const startMap = validParamMap ?? 'gudang';
-      questionMgrRef.current.reset(1942);
+      const startTopic = validParamTopic ?? 'ALL';
+      activeTopicRef.current = startTopic;
+      questionMgrRef.current.reset(1942, startTopic);
       controller.startNewGame(startMap);
       setPhase('playing');
       document.body.dataset.state = 'playing';
@@ -462,7 +490,10 @@ export default function App() {
 
     const onVisibility = () => {
       if (document.visibilityState === 'hidden' && phaseRef.current === 'playing') {
-        const s = controller.exportSaveState();
+        const s: SaveStateV2 = {
+          ...controller.exportSaveState(),
+          topicId: activeTopicRef.current,
+        };
         saveGameState(s);
         setSavedGame(s);
       }
@@ -484,17 +515,26 @@ export default function App() {
     }
   }, []);
 
+  const handleSelectTopic = useCallback((topicId: QuizTopicId) => {
+    setSelectedTopic(topicId);
+    selectedTopicRef.current = topicId;
+  }, []);
+
   const handleStartNewGame = useCallback(
-    (mapId?: MapId) => {
+    (mapId?: MapId, topicId?: QuizTopicId) => {
       const ctrl = controllerRef.current;
       if (!ctrl) return;
       const targetMap = mapId ?? selectedMapRef.current;
+      const targetTopic = topicId ?? selectedTopicRef.current;
       setSelectedMap(targetMap);
       selectedMapRef.current = targetMap;
+      setSelectedTopic(targetTopic);
+      selectedTopicRef.current = targetTopic;
+      activeTopicRef.current = targetTopic;
       AudioManager.ensure();
       AudioManager.setVolumes(settings.musicVolume, settings.sfxVolume, settings.muted);
       AudioManager.startBGM();
-      questionMgrRef.current.reset(Date.now());
+      questionMgrRef.current.reset(Date.now(), targetTopic);
       clearGameState();
       setSavedGame(null);
       setRunSummary(null);
@@ -514,10 +554,11 @@ export default function App() {
     const ctrl = controllerRef.current;
     if (!ctrl) return;
     const targetMap = ctrl.activeMapId || selectedMapRef.current;
+    const targetTopic = activeTopicRef.current;
     AudioManager.ensure();
     AudioManager.setVolumes(settings.musicVolume, settings.sfxVolume, settings.muted);
     AudioManager.startBGM();
-    questionMgrRef.current.reset(Date.now());
+    questionMgrRef.current.reset(Date.now(), targetTopic);
     clearGameState();
     setSavedGame(null);
     setRunSummary(null);
@@ -538,12 +579,19 @@ export default function App() {
     if (!ctrl || !savedGame) return;
     const savedMap: MapId =
       savedGame.mapId && MAP_CATALOG[savedGame.mapId] ? savedGame.mapId : 'gudang';
+    const savedTopic: QuizTopicId =
+      savedGame.topicId && TOPIC_OPTIONS.some((t) => t.id === savedGame.topicId)
+        ? savedGame.topicId
+        : 'ALL';
     setSelectedMap(savedMap);
     selectedMapRef.current = savedMap;
+    setSelectedTopic(savedTopic);
+    selectedTopicRef.current = savedTopic;
+    activeTopicRef.current = savedTopic;
     AudioManager.ensure();
     AudioManager.setVolumes(settings.musicVolume, settings.sfxVolume, settings.muted);
     AudioManager.startBGM();
-    questionMgrRef.current.reset(Date.now());
+    questionMgrRef.current.reset(Date.now(), savedTopic);
     setRunSummary(null);
     setActiveQuiz(null);
     setMapExpanded(false);
@@ -573,6 +621,7 @@ export default function App() {
       const entry: LeaderboardEntry = {
         name: playerName,
         mapId: runSummary.mapId,
+        topicId: runSummary.topicId ?? activeTopicRef.current,
         score: runSummary.score,
         rank: runSummary.rank,
         elapsedTime: runSummary.elapsedTime,
@@ -607,6 +656,8 @@ export default function App() {
         <TitleScreen
           selectedMap={selectedMap}
           onSelectMap={handleSelectMap}
+          selectedTopic={selectedTopic}
+          onSelectTopic={handleSelectTopic}
           savedGame={savedGame}
           personalBest={personalBest}
           bankError={bankError}
@@ -678,6 +729,7 @@ export default function App() {
       {/* Pause Modal */}
       {phase === 'paused' && subModal === 'none' && !storyBookOpen && (
         <PauseModal
+          activeTopic={activeTopicRef.current}
           onResume={() => syncPhase('playing')}
           onRestart={handleRestartDirect}
           onOpenSettings={() => setSubModal('settings')}

@@ -13,7 +13,9 @@ interface IntroCutsceneOverlayProps {
 function getCutsceneBeats(mapId: MapId) {
   const def = MAP_CATALOG[mapId];
   const locText =
-    mapId === 'hutan'
+    mapId === 'pelabuhan'
+      ? 'pos jaga dermaga pelabuhan'
+      : mapId === 'hutan'
       ? 'rimba malam penuh kabut'
       : mapId === 'pedesaan'
       ? 'kampung pedesaan yang dijaga ketat'
@@ -102,9 +104,9 @@ function getBookPages(mapId: MapId) {
       title: 'Catatan Kurir yang Tertinggal',
       body: [
         `Jika kau membaca lembar ini di bawah lampu kuningan ${def.regionNames.depot}, berarti patroli juga telah menguncimu di ${def.name} (1942).`,
-        `Malam tadi, ${def.guardCount} penjaga dikerahkan ke seluruh sektor yang sangat luas (${def.gridSize}×${def.gridSize}${def.floors > 1 ? ` × ${def.floors} lantai` : ''}) setelah kurir sandi tertangkap. Pintu baja hanya bisa dibuka dengan tujuh kunci induk.`,
+        `Malam tadi, ${def.guardCount} penjaga berpatroli di area ${def.gridSize}×${def.gridSize}${def.floors > 1 ? ` × ${def.floors} lantai` : ''}${def.durationLabel ? ` (estimasi ${def.durationLabel})` : ''}. Pintu baja hanya bisa dibuka dengan tujuh kunci induk.`,
       ],
-      footnote: `Arsip ${def.name} · Tingkat ${def.difficultyLabel}`,
+      footnote: `Arsip ${def.name} · Tingkat ${def.difficultyLabel}${def.durationLabel ? ` (${def.durationLabel})` : ''}`,
     },
     {
       chapter: 'Bagian II · Peta & Rintangan',

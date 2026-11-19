@@ -14,7 +14,9 @@ import {
 } from 'lucide-react';
 import { ArchivalCrestSVG, BriefingSketchSVG, VictoryArtworkSVG } from './HandDrawnArtwork';
 import { formatClock } from './HUD';
+import { TOPIC_OPTIONS, getTopicLabel } from '../data/ww2Questions';
 import { MAP_CATALOG, MAP_ORDER, TOTAL_KEYS } from '../maze/MazeConfig';
+import { getTopicCounts } from '../questions/QuestionValidator';
 import { DEFAULT_SETTINGS } from '../systems/SaveManager';
 import type {
   DifficultyLevel,
@@ -22,17 +24,26 @@ import type {
   GraphicsQuality,
   LeaderboardEntry,
   MapId,
+  QuizTopicId,
   RunSummary,
   SaveStateV2,
 } from '../types/game';
 
+const TOPIC_COUNTS = getTopicCounts();
+
+function getTopicShortLabel(topicId: QuizTopicId = 'ALL'): string {
+  return TOPIC_OPTIONS.find((t) => t.id === topicId)?.shortLabel ?? 'Semua Materi';
+}
+
 interface TitleScreenProps {
   selectedMap: MapId;
   onSelectMap: (mapId: MapId) => void;
+  selectedTopic: QuizTopicId;
+  onSelectTopic: (topicId: QuizTopicId) => void;
   savedGame: SaveStateV2 | null;
   personalBest: number | null;
   bankError: string | null;
-  onStartNew: (mapId: MapId) => void;
+  onStartNew: (mapId: MapId, topicId: QuizTopicId) => void;
   onContinueSave: () => void;
   onOpenHowTo: () => void;
   onOpenArchive: () => void;
@@ -44,6 +55,8 @@ interface TitleScreenProps {
 export const TitleScreen: React.FC<TitleScreenProps> = ({
   selectedMap,
   onSelectMap,
+  selectedTopic,
+  onSelectTopic,
   savedGame,
   personalBest,
   bankError,
@@ -56,10 +69,13 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   isSubModalOpen,
 }) => {
   const activeDef = MAP_CATALOG[selectedMap];
+  const activeTopicMeta = TOPIC_OPTIONS.find((t) => t.id === selectedTopic) ?? TOPIC_OPTIONS[0];
+  const activeTopicCount = TOPIC_COUNTS[selectedTopic] ?? TOPIC_COUNTS.ALL;
   const savedMapName =
     savedGame?.mapId && MAP_CATALOG[savedGame.mapId]
       ? MAP_CATALOG[savedGame.mapId].shortName
       : 'Gudang';
+  const savedTopicName = getTopicShortLabel(savedGame?.topicId ?? 'ALL');
 
   // Press Enter or Space on title screen to start when no modal is open
   useEffect(() => {
@@ -67,39 +83,39 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       if (isSubModalOpen) return;
       if (e.code === 'Enter' || e.code === 'Space') {
         e.preventDefault();
-        onStartNew(selectedMap);
+        onStartNew(selectedMap, selectedTopic);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isSubModalOpen, onStartNew, selectedMap]);
+  }, [isSubModalOpen, onStartNew, selectedMap, selectedTopic]);
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center bg-gradient-to-r from-[#090c11]/94 via-[#090c11]/74 to-transparent p-5 sm:p-10 lg:p-14 overflow-y-auto">
-      <div className="max-w-2xl w-full flex flex-col gap-4 text-[#ebe3d0]">
-        <div className="flex items-center gap-4">
-          <ArchivalCrestSVG className="w-12 h-12 sm:w-14 sm:h-14 shrink-0" />
+    <div className="fixed inset-0 z-30 flex items-center bg-gradient-to-r from-[#090c11]/94 via-[#090c11]/74 to-transparent p-4 sm:p-8 lg:p-10 overflow-y-auto">
+      <div className="max-w-2xl w-full flex flex-col gap-3 text-[#ebe3d0]">
+        <div className="flex items-center gap-3.5">
+          <ArchivalCrestSVG className="w-11 h-11 sm:w-12 sm:h-12 shrink-0" />
           <div>
-            <p className="font-mono-num text-xs tracking-[0.22em] uppercase text-[#d4a24c]">
+            <p className="font-mono-num text-[11px] tracking-[0.22em] uppercase text-[#d4a24c]">
               Arsip Operasi Pelarian · 1942
             </p>
-            <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-wider uppercase leading-none text-[#f7f2e6]">
+            <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-wider uppercase leading-none text-[#f7f2e6]">
               ESCAPE 1942
             </h1>
           </div>
         </div>
 
-        <p className="text-xs sm:text-sm text-[#ebe3d0]/85 leading-relaxed max-w-xl">
-          Pilih salah satu dari <strong>4 arena labirin 1942</strong> dengan pola jalur dan tingkat kesulitan berbeda. Kumpulkan {TOTAL_KEYS} kunci dengan tombol E, hindari patroli penjaga, dan jawab kuis Sejarah Perang Dunia II untuk bebas.
+        <p className="text-xs sm:text-sm text-[#ebe3d0]/85 leading-relaxed max-w-2xl">
+          Pilih <strong>5 arena labirin</strong> &amp; <strong>materi kuis sejarah</strong>. Kumpulkan {TOTAL_KEYS} kunci dengan tombol E, hindari patroli penjaga, dan jawab kuis Perang Dunia II untuk bebas.
         </p>
 
-        {/* 4-Map Arena Selector */}
-        <div className="space-y-2 max-w-xl">
+        {/* 5-Map Arena Selector */}
+        <div className="space-y-1.5 max-w-2xl">
           <div className="flex items-center justify-between text-[11px] font-mono-num uppercase tracking-wider text-[#d4a24c]">
-            <span>Pilih Arena Labirin (4 Peta)</span>
+            <span>Pilih Arena Labirin (5 Peta)</span>
             <span className="text-[#ebe3d0]/70">{activeDef.name}</span>
           </div>
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Pilih arena labirin">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5" role="radiogroup" aria-label="Pilih arena labirin">
             {MAP_ORDER.map((mId) => {
               const m = MAP_CATALOG[mId];
               const isSelected = selectedMap === mId;
@@ -111,7 +127,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
                   aria-checked={isSelected}
                   data-testid={`map-card-${m.id}`}
                   onClick={() => onSelectMap(m.id)}
-                  className={`relative text-left p-2.5 sm:p-3 border transition-colors cursor-pointer ${
+                  className={`relative text-left p-2 sm:p-2.5 border transition-colors cursor-pointer ${
                     isSelected
                       ? 'bg-[#182130]/95 border-[#d4a24c] shadow-md'
                       : 'bg-[#10151e]/90 border-[#ebe3d0]/18 hover:border-[#d4a24c]/55 hover:bg-[#151c27]/95'
@@ -121,8 +137,8 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
                     className="absolute left-0 top-0 bottom-0 w-1"
                     style={{ backgroundColor: isSelected ? m.accentHex : 'transparent' }}
                   />
-                  <div className="flex items-center justify-between gap-2 pl-1">
-                    <span className="font-display text-sm sm:text-base uppercase tracking-wide text-[#f7f2e6] leading-tight">
+                  <div className="flex items-center justify-between gap-1.5 pl-1">
+                    <span className="font-display text-sm uppercase tracking-wide text-[#f7f2e6] leading-tight">
                       {m.shortName}
                     </span>
                     <span
@@ -136,35 +152,84 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
                       {m.difficultyLabel}
                     </span>
                   </div>
-                  <div className="pl-1 mt-1 font-mono-num text-[11px] text-[#ebe3d0]/75">
+                  <div className="pl-1 mt-0.5 font-mono-num text-[11px] text-[#ebe3d0]/75">
                     {m.gridSize}×{m.gridSize}
                     {m.floors > 1 ? ` · ${m.floors} Lt.` : ''} · {m.guardCount} Penjaga
                   </div>
-                  <div className="pl-1 mt-0.5 text-[11px] text-[#ebe3d0]/60 truncate">
+                  <div className="pl-1 text-[11px] text-[#ebe3d0]/60 truncate">
+                    {m.durationLabel ? `${m.durationLabel} · ` : ''}
                     {m.patternLabel}
                   </div>
                 </button>
               );
             })}
           </div>
-          <p className="text-xs text-[#ebe3d0]/75 bg-[#10151e]/80 border border-[#ebe3d0]/12 px-3 py-2">
+          <p className="text-[11px] text-[#ebe3d0]/75 bg-[#10151e]/80 border border-[#ebe3d0]/12 px-2.5 py-1.5">
             <strong className="text-[#f0c76e]">{activeDef.name}:</strong> {activeDef.subtitle}
           </p>
         </div>
 
+        {/* 5-Topic Quiz Material Selector */}
+        <div className="space-y-1.5 max-w-2xl">
+          <div className="flex items-center justify-between text-[11px] font-mono-num uppercase tracking-wider text-[#d4a24c]">
+            <span>Pilih Materi Kuis (5 Topik)</span>
+            <span className="text-[#ebe3d0]/70">
+              {activeTopicMeta.label} · {activeTopicCount.total} Soal
+            </span>
+          </div>
+          <div
+            className="grid grid-cols-2 sm:grid-cols-5 gap-1.5"
+            role="radiogroup"
+            aria-label="Pilih materi kuis"
+          >
+            {TOPIC_OPTIONS.map((topic) => {
+              const isSelected = selectedTopic === topic.id;
+              const counts = TOPIC_COUNTS[topic.id];
+              return (
+                <button
+                  key={topic.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  data-testid={`topic-card-${topic.id}`}
+                  onClick={() => onSelectTopic(topic.id)}
+                  className={`text-left px-2.5 py-2 border transition-colors cursor-pointer flex flex-col justify-between gap-1 ${
+                    isSelected
+                      ? 'bg-[#211b10]/95 border-[#d4a24c] text-[#f7f2e6]'
+                      : 'bg-[#10151e]/90 border-[#ebe3d0]/18 text-[#ebe3d0]/80 hover:border-[#d4a24c]/55 hover:bg-[#151c27]/95'
+                  }`}
+                >
+                  <span className="font-display text-xs uppercase tracking-wide leading-tight">
+                    {topic.shortLabel}
+                  </span>
+                  <span className="font-mono-num text-[10px] text-[#d4a24c]">
+                    {counts.total} Soal
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-[#ebe3d0]/75 bg-[#10151e]/80 border border-[#ebe3d0]/12 px-2.5 py-1.5">
+            <strong className="text-[#f0c76e]">{activeTopicMeta.label}:</strong> {activeTopicMeta.description}{' '}
+            <span className="font-mono-num text-[#d4a24c]">
+              ({activeTopicCount.multipleChoice} PG · {activeTopicCount.trueFalse} Benar/Salah)
+            </span>
+          </p>
+        </div>
+
         {bankError && (
-          <div className="p-3 bg-[#361618] border border-[#c2413b] text-xs text-[#fad4d2] flex items-start gap-2 max-w-xl">
+          <div className="p-2.5 bg-[#361618] border border-[#c2413b] text-xs text-[#fad4d2] flex items-start gap-2 max-w-2xl">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-[#f28b82]" />
             <span>Validasi bank soal bermasalah: {bankError}</span>
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-2.5 max-w-xl">
+        <div className="flex flex-col sm:flex-row gap-2.5 max-w-2xl">
           <button
             type="button"
             data-start="true"
-            onClick={() => onStartNew(selectedMap)}
-            className="px-6 py-3 bg-[#d4a24c] hover:bg-[#e2b361] text-[#0b0e13] font-display text-base sm:text-lg font-semibold tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg transition-colors cursor-pointer"
+            onClick={() => onStartNew(selectedMap, selectedTopic)}
+            className="px-6 py-2.5 bg-[#d4a24c] hover:bg-[#e2b361] text-[#0b0e13] font-display text-base sm:text-lg font-semibold tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg transition-colors cursor-pointer"
           >
             <Play className="w-5 h-5 fill-current" />
             <span>Mulai · {activeDef.shortName}</span>
@@ -174,18 +239,18 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             <button
               type="button"
               onClick={onContinueSave}
-              className="px-4 py-2.5 bg-[#151c26]/95 hover:bg-[#1e2736] text-[#ebe3d0] border border-[#d4a24c]/55 font-display text-sm sm:text-base tracking-wider uppercase flex flex-col items-start justify-center transition-colors cursor-pointer"
+              className="px-4 py-2 bg-[#151c26]/95 hover:bg-[#1e2736] text-[#ebe3d0] border border-[#d4a24c]/55 font-display text-sm sm:text-base tracking-wider uppercase flex flex-col items-start justify-center transition-colors cursor-pointer"
             >
               <span className="leading-none">Lanjutkan · {savedMapName}</span>
               <span className="font-mono-num text-[11px] text-[#d4a24c] mt-1">
-                Kunci {savedGame.collectedKeys.length}/{TOTAL_KEYS} · Nyawa {savedGame.lives}/5 ·{' '}
+                {savedTopicName} · Kunci {savedGame.collectedKeys.length}/{TOTAL_KEYS} ·{' '}
                 {formatClock(savedGame.elapsedTime)}
               </span>
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-xl">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-2xl">
           <button
             type="button"
             onClick={onOpenHowTo}
@@ -220,7 +285,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#ebe3d0]/65 pt-2 border-t border-[#ebe3d0]/12 max-w-xl">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#ebe3d0]/65 pt-2 border-t border-[#ebe3d0]/12 max-w-2xl">
           <span>WASD · Gerak</span>
           <span>Shift · Sprint</span>
           <span>E · Kunci / Buku / Pintu</span>
@@ -237,12 +302,13 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
 };
 
 export const PauseModal: React.FC<{
+  activeTopic?: QuizTopicId;
   onResume: () => void;
   onRestart: () => void;
   onOpenSettings: () => void;
   onOpenHowTo: () => void;
   onMainMenu: () => void;
-}> = ({ onResume, onRestart, onOpenSettings, onOpenHowTo, onMainMenu }) => (
+}> = ({ activeTopic = 'ALL', onResume, onRestart, onOpenSettings, onOpenHowTo, onMainMenu }) => (
   <div
     className="fixed inset-0 z-40 flex items-center justify-center bg-[#080b0f]/86 p-4"
     role="dialog"
@@ -252,7 +318,7 @@ export const PauseModal: React.FC<{
     <div className="w-full max-w-sm bg-[#121720] border border-[#d4a24c]/50 p-6 text-[#ebe3d0] shadow-2xl space-y-4">
       <div className="border-b border-[#ebe3d0]/15 pb-3">
         <p className="font-mono-num text-xs uppercase tracking-widest text-[#d4a24c]">
-          Misi Dijeda
+          Misi Dijeda · {getTopicShortLabel(activeTopic)}
         </p>
         <h2 id="pause-title" className="font-display text-2xl uppercase tracking-wider">
           Menu Jeda
@@ -328,10 +394,10 @@ export const HowToPlayModal: React.FC<{ onClose: () => void }> = ({ onClose }) =
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="p-4 bg-[#171e29] border border-[#ebe3d0]/12 space-y-2">
             <h3 className="font-display text-base uppercase text-[#d4a24c]">
-              4 Pilihan Peta & 3 Jalur Keluar
+              5 Pilihan Peta & 3 Jalur Keluar
             </h3>
             <p className="text-[#ebe3d0]/85 leading-relaxed">
-              Pilih arena <strong>Gudang (96×96)</strong>, <strong>Hutan (112×112)</strong>, <strong>Pedesaan (124×124)</strong>, atau <strong>Gedung 3 Lantai (104×104 × 3 Lt.)</strong> yang memakai <strong>anak tangga</strong> untuk naik-turun antar lantai. Kumpulkan <strong>{TOTAL_KEYS} kunci</strong> (tekan <strong>E</strong>) untuk membuka ketiga jalur keluar (A, B, C).
+              Pilih arena <strong>Pelabuhan (56×56 · Mudah · 3–5 Mnt)</strong>, <strong>Gudang (96×96)</strong>, <strong>Hutan (112×112)</strong>, <strong>Pedesaan (124×124)</strong>, atau <strong>Gedung 3 Lantai (104×104 × 3 Lt.)</strong> yang memakai <strong>anak tangga</strong>. Kumpulkan <strong>{TOTAL_KEYS} kunci</strong> (tekan <strong>E</strong>) untuk membuka ketiga jalur keluar (A, B, C).
             </p>
           </div>
 
@@ -340,16 +406,16 @@ export const HowToPlayModal: React.FC<{ onClose: () => void }> = ({ onClose }) =
               Patroli Penjaga, Sprint & Stamina
             </h3>
             <p className="text-[#ebe3d0]/85 leading-relaxed">
-              Setiap arena memiliki jumlah penjaga dan tingkat ketajaman patroli berbeda (11–18 penjaga). Tahan <strong>Shift</strong> untuk sprint selama stamina tersedia. Jika tertangkap, jawab kuis Benar/Salah sebelum waktu habis.
+              Setiap arena memiliki jumlah penjaga dan tingkat ketajaman patroli berbeda (6–18 penjaga). Tahan <strong>Shift</strong> untuk sprint selama stamina tersedia. Jika tertangkap, jawab kuis Benar/Salah sebelum waktu habis.
             </p>
           </div>
 
           <div className="p-4 bg-[#171e29] border border-[#ebe3d0]/12 space-y-2">
             <h3 className="font-display text-base uppercase text-[#d4a24c]">
-              Buku Catatan, Pintu Kuis & Pemulihan
+              Pilihan Materi, Buku & Pemulihan
             </h3>
             <p className="text-[#ebe3d0]/85 leading-relaxed">
-              Baca <strong>Buku Catatan</strong> di atas meja ruang awal, ambil kunci, atau buka pintu pemeriksaan dengan menekan <strong>E</strong>. Menjawab salah pada pintu tidak mengurangi nyawa. Menjawab <strong>3 soal benar berturut-turut</strong> memulihkan +1 nyawa (maks. 5).
+              Pilih topik <strong>Semua Materi</strong> atau fokus pada 1 periode (Palagan Eropa, Perang Pasifik, Pendudukan Jepang, atau Akhir Perang &amp; RI). Baca <strong>Buku Catatan</strong>, ambil kunci, atau buka pintu dengan <strong>E</strong>. Menjawab salah pada pintu tidak mengurangi nyawa; <strong>3 benar berturut-turut</strong> memulihkan +1 nyawa.
             </p>
           </div>
 
@@ -581,7 +647,7 @@ export const LeaderboardModal: React.FC<{
       aria-modal="true"
       aria-labelledby="leaderboard-title"
     >
-      <div className="w-full max-w-2xl max-h-[85vh] flex flex-col bg-[#121720] border border-[#d4a24c]/45 text-[#ebe3d0] shadow-2xl">
+      <div className="w-full max-w-3xl max-h-[85vh] flex flex-col bg-[#121720] border border-[#d4a24c]/45 text-[#ebe3d0] shadow-2xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#d4a24c]/25 bg-[#0f141c]">
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-[#d4a24c]" />
@@ -612,6 +678,7 @@ export const LeaderboardModal: React.FC<{
                     <th className="py-2 pr-3">#</th>
                     <th className="py-2 pr-3">Nama</th>
                     <th className="py-2 pr-3">Peta</th>
+                    <th className="py-2 pr-3">Materi</th>
                     <th className="py-2 pr-3">Skor</th>
                     <th className="py-2 pr-3">Rank</th>
                     <th className="py-2 pr-3">Rute</th>
@@ -627,6 +694,9 @@ export const LeaderboardModal: React.FC<{
                       <td className="py-2.5 pr-3 font-sans font-medium text-[#ebe3d0]">{row.name}</td>
                       <td className="py-2.5 pr-3 font-sans text-xs text-[#ebe3d0]/80">
                         {(row.mapId && MAP_CATALOG[row.mapId]?.shortName) || 'Gudang'}
+                      </td>
+                      <td className="py-2.5 pr-3 font-sans text-xs text-[#d4a24c]/90">
+                        {getTopicShortLabel(row.topicId ?? 'ALL')}
                       </td>
                       <td className="py-2.5 pr-3 text-[#f0c76e] font-semibold">{row.score}</td>
                       <td className="py-2.5 pr-3">{row.rank}</td>
@@ -732,6 +802,9 @@ export const EndGameModal: React.FC<{
             <p className="text-xs text-[#d4a24c] mt-0.5">
               Arena: {summary.mapName}
               {summary.won && summary.selectedExitName ? ` · Keluar lewat ${summary.selectedExitName}` : ''}
+            </p>
+            <p className="text-[11px] text-[#ebe3d0]/70 mt-0.5">
+              Materi Kuis: {getTopicLabel(summary.topicId ?? 'ALL')}
             </p>
           </div>
 

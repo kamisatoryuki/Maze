@@ -34,6 +34,7 @@ export interface MapDefinition {
   subtitle: string;
   patternLabel: string;
   difficultyLabel: string;
+  durationLabel?: string;
   gridSize: number;
   floors: number;
   guardCount: number;
@@ -47,6 +48,31 @@ export interface MapDefinition {
 }
 
 export const MAP_CATALOG: Record<MapId, MapDefinition> = {
+  pelabuhan: {
+    id: 'pelabuhan',
+    name: 'Pos Pelabuhan 1942',
+    shortName: 'Pelabuhan',
+    subtitle:
+      'Pos jaga dermaga ringkas berpola terbuka (estimasi 3–5 menit) dengan 6 penjaga longgar dan waktu kuis ekstra.',
+    patternLabel: 'Dermaga Terbuka',
+    difficultyLabel: 'Mudah',
+    durationLabel: '3–5 Mnt',
+    gridSize: 56,
+    floors: 1,
+    guardCount: 6,
+    trapCount: 8,
+    guardSpeedMult: 0.78,
+    guardSightMult: 0.78,
+    encounterTimeDelta: 3,
+    openSky: true,
+    accentHex: '#66b3ff',
+    regionNames: {
+      depot: 'Dermaga Barat',
+      admin: 'Pos Bea Cukai',
+      service: 'Gudang Tali',
+      outer: 'Mercusuar Timur',
+    },
+  },
   gudang: {
     id: 'gudang',
     name: 'Gudang Logistik',
@@ -141,7 +167,7 @@ export const MAP_CATALOG: Record<MapId, MapDefinition> = {
   },
 };
 
-export const MAP_ORDER: MapId[] = ['gudang', 'hutan', 'pedesaan', 'gedung'];
+export const MAP_ORDER: MapId[] = ['pelabuhan', 'gudang', 'hutan', 'pedesaan', 'gedung'];
 
 export const REGION_NAMES: Record<RegionId, string> = MAP_CATALOG.gudang.regionNames;
 

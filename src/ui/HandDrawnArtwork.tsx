@@ -151,6 +151,54 @@ export const VictoryArtworkSVG: React.FC<{ routeId: EscapeRouteId | null }> = ({
   </svg>
 );
 
+interface StoryChapter {
+  actLabel: string;
+  era: string;
+  category: string;
+  title: string;
+  narrative: string;
+  sourceIds: string[];
+}
+
+const STORY_CHAPTERS: StoryChapter[] = [
+  {
+    actLabel: 'BABAK I',
+    era: '1939–1944',
+    category: 'WWII-Europe',
+    title: 'Api di Barat: Dari Polandia ke Pantai Normandia',
+    narrative:
+      'Semua berawal dari meja perjanjian rahasia: pada 23 Agustus 1939, Jerman dan Uni Soviet meneken Pakta Molotov–Ribbentrop. Sepekan kemudian, 1 September 1939, pasukan Jerman menyerbu Polandia, memaksa Inggris dan Prancis menyatakan perang pada 3 September 1939. Sementara Blok Poros—Jerman, Italia, dan Jepang—mengikat kekuatan, langit Inggris memanas lewat pertempuran udara Battle of Britain (1940) saat RAF menahan Luftwaffe, dan Eropa diliputi tragedi kemanusiaan Holocaust. Pada 22 Juni 1941, Jerman melanggar pakta dan melancarkan Operasi Barbarossa ke Uni Soviet, tetapi lajunya patah di reruntuhan Stalingrad (1942–Februari 1943). Gelombang akhirnya berbalik pada 6 Juni 1944 (D-Day), ketika armada Sekutu menerjang Normandia dalam Operasi Overlord.',
+    sourceIds: ['USHMM_WWII_DATES', 'USHMM_WWII_EUROPE', 'USHMM_STALINGRAD', 'USHMM_DDAY'],
+  },
+  {
+    actLabel: 'BABAK II',
+    era: '1941–1945',
+    category: 'Pacific-War',
+    title: 'Badai Pasifik: Fajar Merah di Pearl Harbor',
+    narrative:
+      'Setelah Pakta Tripartit 1940 menyatukan Jerman, Italia, dan Jepang, fajar 7 Desember 1941 dikejutkan oleh serangan mendadak Jepang atas pangkalan armada AS di Pearl Harbor, Hawaii. Sehari berselang, 8 Desember 1941, Amerika Serikat menyatakan perang. Jepang melaju pesat ke Asia Tenggara: benteng Inggris di Singapura jatuh pada Februari 1942, disusul pertempuran armada gabungan Sekutu ABDA melawan Jepang di Laut Jawa pada akhir bulan yang sama. Namun di samudra luas, pertempuran Coral Sea (Mei 1942) menahan gerak ke Port Moresby, dan kemenangan AS di Midway (Juni 1942) membalikkan kendali Pasifik tengah—memulai jalan panjang berdarah hingga pertempuran sengit Iwo Jima dan Okinawa pada paruh awal 1945.',
+    sourceIds: ['FDR_WWII_FACTS', 'USHMM_WWII_PACIFIC', 'US_NAVY_JAVA_SEA', 'US_NAVY_CORAL_SEA', 'NATIONAL_WWII_MUSEUM_MIDWAY'],
+  },
+  {
+    actLabel: 'BABAK III',
+    era: '1942–1945',
+    category: 'Indonesia-Occupation',
+    title: 'Nusantara 1942: Runtuhnya Kalijati dan Tahun-Tahun Pendudukan',
+    narrative:
+      'Didorong kebutuhan mendesak akan minyak bumi, karet, dan bauksit, pasukan Jepang mendarat di Tarakan pada Januari 1942. Tekanan militer itu berujung pada penandatanganan penyerahan tanpa syarat pasukan Hindia Belanda di Kalijati pada 8 Maret 1942. Sejak saat itu hingga 1945, penguasa baru menebar propaganda Gerakan 3A untuk merebut simpati rakyat, lalu membentuk PUTERA pada 1943 di bawah pimpinan Empat Serangkai—Soekarno, Mohammad Hatta, Ki Hajar Dewantara, dan K.H. Mas Mansyur—yang diam-diam menyalakan kesadaran kebangsaan. Di balik semboyan itu, rakyat menanggung getirnya pengerahan tenaga kerja paksa Romusha, sementara para pemuda direkrut ke barisan pembantu prajurit Heiho serta pasukan sukarela PETA (Pembela Tanah Air) sejak 3 Oktober 1943.',
+    sourceIds: ['ANNE_FRANK_DUTCH_EAST_INDIES', 'ANRI_JAPANESE_OCCUPATION', 'KOMPAS_3A', 'KEMBUD_PUTERA', 'KEMDIKBUD_ROMUSHA_SITE', 'KEMDIKBUD_MODULE_HISTORY'],
+  },
+  {
+    actLabel: 'BABAK IV',
+    era: 'Mei–Okt 1945',
+    category: 'End-of-War',
+    title: 'Fajar Baru: Runtuhnya Poros dan Lahirnya Republik',
+    narrative:
+      'Pada 8 Mei 1945, menyerahnya Jerman menandai V-E Day di Eropa. Sekutu kemudian mengeluarkan Deklarasi Potsdam (26 Juli 1945) yang menuntut penyerahan tanpa syarat Jepang. Setelah bom atom menghantam Hiroshima (6 Agustus) dan Nagasaki (9 Agustus), Jepang mengumumkan penerimaan syarat menyerah pada 15 Agustus 1945. Kekosongan kekuasaan (vacuum of power) sebelum pasukan Sekutu tiba dimanfaatkan bangsa Indonesia: pada 17 Agustus 1945, Proklamasi Kemerdekaan dibacakan dan ditandatangani oleh Soekarno dan Mohammad Hatta, lalu keesokan harinya, 18 Agustus 1945, Sidang PPKI mengesahkan UUD 1945 serta memilih keduanya sebagai Presiden dan Wakil Presiden RI. Di panggung dunia, Jepang menandatangani kapitulasi resmi di atas kapal perang USS Missouri di Teluk Tokyo pada 2 September 1945, sebelum Perserikatan Bangsa-Bangsa (PBB) resmi berdiri pada 24 Oktober 1945.',
+    sourceIds: ['USHMM_WWII_DATES', 'US_DOD_WWII', 'ANRI_JAPANESE_OCCUPATION', 'KEMDIKBUD_MODULE_HISTORY'],
+  },
+];
+
 interface JournalEntry {
   era: string;
   category: string;
@@ -161,11 +209,11 @@ interface JournalEntry {
 
 const ARCHIVE_ENTRIES: JournalEntry[] = [
   {
-    era: '1–3 Sep 1939',
+    era: '1939–1940',
     category: 'WWII-Europe',
-    title: 'Invasi Polandia & Awal Perang Dunia II di Eropa',
+    title: 'Invasi Polandia & Pertempuran Britania',
     summary:
-      'Jerman menginvasi Polandia pada 1 September 1939 setelah menandatangani Pakta Molotov–Ribbentrop. Dua hari kemudian, 3 September 1939, Inggris dan Prancis menyatakan perang terhadap Jerman.',
+      'Jerman menginvasi Polandia pada 1 September 1939 setelah Pakta Molotov–Ribbentrop, mendorong Inggris dan Prancis menyatakan perang pada 3 September 1939. Pada 1940, setelah menaklukkan Prancis, Luftwaffe melancarkan Battle of Britain namun gagal menundukkan Inggris.',
     sourceIds: ['USHMM_WWII_DATES', 'USHMM_WWII_EUROPE'],
   },
   {
@@ -193,11 +241,11 @@ const ARCHIVE_ENTRIES: JournalEntry[] = [
     sourceIds: ['FDR_WWII_FACTS', 'USHMM_WWII_PACIFIC'],
   },
   {
-    era: 'Feb–Jun 1942',
+    era: '1942–1945',
     category: 'Pacific-War',
-    title: 'Pertempuran Laut Jawa, Coral Sea & Midway',
+    title: 'Laut Jawa, Coral Sea, Midway hingga Iwo Jima & Okinawa',
     summary:
-      'Pada Februari 1942 armada Sekutu ABDA bertempur di Laut Jawa sebelum Jepang menduduki Jawa. Pada Mei 1942 Pertempuran Coral Sea menahan laju ke Port Moresby, lalu kemenangan AS di Midway (Juni 1942) menjadi titik balik di Pasifik.',
+      'Armada Sekutu ABDA bertempur di Laut Jawa (Februari 1942) sebelum Jawa diduduki. Pertempuran Coral Sea (Mei 1942) menahan laju ke Port Moresby, Midway (Juni 1942) menjadi titik balik Pasifik, diikuti kampanye Guadalcanal serta pertempuran sengit di Iwo Jima dan Okinawa (1945).',
     sourceIds: ['US_NAVY_JAVA_SEA', 'US_NAVY_CORAL_SEA', 'NATIONAL_WWII_MUSEUM_MIDWAY'],
   },
   {
@@ -211,18 +259,18 @@ const ARCHIVE_ENTRIES: JournalEntry[] = [
   {
     era: '1942–1945',
     category: 'Indonesia-Occupation',
-    title: 'Propaganda 3A, PUTERA, Romusha, PETA & Heiho',
+    title: 'Propaganda 3A, PUTERA (Empat Serangkai), Romusha & PETA',
     summary:
-      'Pemerintah pendudukan Jepang menggerakkan propaganda Gerakan 3A dan PUTERA (Pusat Tenaga Rakyat), mengerahkan tenaga kerja paksa Romusha, serta membentuk satuan militer Heiho dan PETA (Pembela Tanah Air, 3 Oktober 1943).',
+      'Pendudukan Jepang menggerakkan Gerakan 3A dan PUTERA (Pusat Tenaga Rakyat, 1943) yang dipimpin Empat Serangkai (Soekarno, Hatta, Ki Hajar Dewantara, KH Mas Mansur), mengerahkan kerja paksa Romusha, serta membentuk satuan militer Heiho dan PETA (3 Oktober 1943).',
     sourceIds: ['KEMDIKBUD_MODULE_HISTORY', 'KEMDIKBUD_ROMUSHA_SITE', 'KEMBUD_PUTERA', 'KOMPAS_3A'],
   },
   {
-    era: 'Mei–Sep 1945',
+    era: 'Mei–Okt 1945',
     category: 'End-of-War',
-    title: 'V-E Day, Bom Atom, Proklamasi RI & Penyerahan Jepang',
+    title: 'V-E Day, Potsdam, USS Missouri, Proklamasi & Lahirnya PBB',
     summary:
-      'Jerman menyerah pada 8 Mei 1945 (V-E Day). Setelah bom atom di Hiroshima (6 Agustus) dan Nagasaki (9 Agustus), Jepang mengumumkan penyerahan pada 15 Agustus 1945. Indonesia memproklamasikan kemerdekaan pada 17 Agustus 1945, dan Jepang menandatangani kapitulasi resmi pada 2 September 1945.',
-    sourceIds: ['USHMM_WWII_DATES', 'US_DOD_WWII', 'ANRI_JAPANESE_OCCUPATION'],
+      'Jerman menyerah pada 8 Mei 1945 (V-E Day), diikuti Deklarasi Potsdam (Juli 1945). Setelah bom atom di Hiroshima (6 Agustus) dan Nagasaki (9 Agustus), Jepang menyerah pada 15 Agustus dan menandatangani kapitulasi resmi di atas USS Missouri pada 2 September 1945. Indonesia memproklamasikan kemerdekaan pada 17 Agustus 1945, menetapkan UUD 1945 dan Presiden pada Sidang PPKI 18 Agustus 1945, serta PBB resmi berdiri pada 24 Oktober 1945.',
+    sourceIds: ['USHMM_WWII_DATES', 'US_DOD_WWII', 'ANRI_JAPANESE_OCCUPATION', 'KEMDIKBUD_MODULE_HISTORY'],
   },
 ];
 
@@ -249,7 +297,7 @@ export const HistoricalJournalModal: React.FC<{ onClose: () => void }> = ({ onCl
                 Arsip Sejarah · Perang Dunia II & Pendudukan 1942
               </h2>
               <p className="text-xs text-[#ebe3d0]/65">
-                Ringkasan fakta terverifikasi dan daftar rujukan resmi soal dalam game
+                Ringkasan fakta terverifikasi, alur kisah 4 babak, dan rujukan resmi soal dalam game
               </p>
             </div>
           </div>
@@ -275,6 +323,17 @@ export const HistoricalJournalModal: React.FC<{ onClose: () => void }> = ({ onCl
           >
             Semua Periode
           </button>
+          <button
+            type="button"
+            onClick={() => setFilter('STORY')}
+            className={`px-3 py-1.5 text-xs font-medium border transition-colors cursor-pointer ${
+              filter === 'STORY'
+                ? 'bg-[#d4a24c] text-[#0c1016] border-[#d4a24c]'
+                : 'bg-[#161d27] text-[#f0c76e] border-[#d4a24c]/40 hover:border-[#d4a24c]'
+            }`}
+          >
+            Kisah 4 Babak
+          </button>
           {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
             <button
               key={key}
@@ -292,42 +351,89 @@ export const HistoricalJournalModal: React.FC<{ onClose: () => void }> = ({ onCl
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {visibleEntries.map((item) => (
-            <article
-              key={item.title}
-              className="p-4 bg-[#171e29] border border-[#ebe3d0]/12"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1.5">
-                <h3 className="font-display text-base tracking-wide text-[#f0c76e]">
-                  {item.title}
-                </h3>
-                <span className="font-mono-num text-xs text-[#ebe3d0]/60">
-                  {item.era}
-                </span>
+          {filter === 'STORY' ? (
+            <>
+              <div className="px-3.5 py-2.5 bg-[#0f151e] border-l-2 border-[#d4a24c] text-xs leading-relaxed text-[#ebe3d0]/80">
+                Alur penceritaan ringkas yang merangkai seluruh materi kuis—dari meletusnya perang di Eropa, badai Pasifik, pendudukan Jepang di Nusantara, hingga lahirnya kemerdekaan Indonesia.
               </div>
-              <p className="text-sm leading-relaxed text-[#ebe3d0]/88 mb-3">
-                {item.summary}
-              </p>
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-[#ebe3d0]/10">
-                {item.sourceIds.map((srcId) => {
-                  const src = HISTORICAL_SOURCES[srcId];
-                  if (!src) return null;
-                  return (
-                    <a
-                      key={srcId}
-                      href={src.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs text-[#91b6e3] hover:text-[#d4a24c] underline underline-offset-2"
-                    >
-                      <ExternalLink className="w-3 h-3 shrink-0" />
-                      {src.label}
-                    </a>
-                  );
-                })}
-              </div>
-            </article>
-          ))}
+              {STORY_CHAPTERS.map((chapter) => (
+                <article
+                  key={chapter.actLabel}
+                  className="p-4 bg-[#171e29] border border-[#d4a24c]/25"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                    <span className="font-mono-num text-[11px] uppercase tracking-widest text-[#d4a24c]">
+                      {chapter.actLabel} · {CATEGORY_LABELS[chapter.category]}
+                    </span>
+                    <span className="font-mono-num text-xs text-[#ebe3d0]/60">
+                      {chapter.era}
+                    </span>
+                  </div>
+                  <h3 className="font-display text-base tracking-wide text-[#f0c76e] mb-2">
+                    {chapter.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-[#ebe3d0]/90 mb-3">
+                    {chapter.narrative}
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-[#ebe3d0]/10">
+                    {chapter.sourceIds.map((srcId) => {
+                      const src = HISTORICAL_SOURCES[srcId];
+                      if (!src) return null;
+                      return (
+                        <a
+                          key={srcId}
+                          href={src.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs text-[#91b6e3] hover:text-[#d4a24c] underline underline-offset-2"
+                        >
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                          {src.label}
+                        </a>
+                      );
+                    })}
+                  </div>
+                </article>
+              ))}
+            </>
+          ) : (
+            visibleEntries.map((item) => (
+              <article
+                key={item.title}
+                className="p-4 bg-[#171e29] border border-[#ebe3d0]/12"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1.5">
+                  <h3 className="font-display text-base tracking-wide text-[#f0c76e]">
+                    {item.title}
+                  </h3>
+                  <span className="font-mono-num text-xs text-[#ebe3d0]/60">
+                    {item.era}
+                  </span>
+                </div>
+                <p className="text-sm leading-relaxed text-[#ebe3d0]/88 mb-3">
+                  {item.summary}
+                </p>
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-[#ebe3d0]/10">
+                  {item.sourceIds.map((srcId) => {
+                    const src = HISTORICAL_SOURCES[srcId];
+                    if (!src) return null;
+                    return (
+                      <a
+                        key={srcId}
+                        href={src.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-[#91b6e3] hover:text-[#d4a24c] underline underline-offset-2"
+                      >
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                        {src.label}
+                      </a>
+                    );
+                  })}
+                </div>
+              </article>
+            ))
+          )}
         </div>
 
         <div className="px-5 py-3 border-t border-[#d4a24c]/25 bg-[#0f141c] flex justify-end">

@@ -4,9 +4,16 @@ export type DifficultyLevel = 'easy' | 'normal' | 'sulit';
 
 export type GraphicsQuality = 'low' | 'medium' | 'high';
 
-export type MapId = 'gudang' | 'hutan' | 'pedesaan' | 'gedung';
+export type MapId = 'pelabuhan' | 'gudang' | 'hutan' | 'pedesaan' | 'gedung';
 
 export type RegionId = 'depot' | 'admin' | 'service' | 'outer';
+
+export type QuizTopicId =
+  | 'ALL'
+  | 'WWII-Europe'
+  | 'Pacific-War'
+  | 'Indonesia-Occupation'
+  | 'End-of-War';
 
 export type EscapeRouteId = 'A' | 'B' | 'C';
 
@@ -188,6 +195,7 @@ export interface RunSummary {
   won: boolean;
   mapId: MapId;
   mapName: string;
+  topicId?: QuizTopicId;
   score: number;
   rank: string;
   elapsedTime: number;
@@ -203,6 +211,7 @@ export interface RunSummary {
 export interface SaveStateV2 {
   version: 2;
   mapId?: MapId;
+  topicId?: QuizTopicId;
   seed: number;
   elapsedTime: number;
   lives: number;
@@ -232,6 +241,7 @@ export interface SaveStateV2 {
 export interface LeaderboardEntry {
   name: string;
   mapId?: MapId;
+  topicId?: QuizTopicId;
   score: number;
   rank: string;
   elapsedTime: number;
