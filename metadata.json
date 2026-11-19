@@ -1,0 +1,6 @@
+{
+  "name": "ESCAPE 1942",
+  "description": "Game edukasi sejarah Perang Dunia II first-person 3D berbasis Three.js dan WebGL2 di kompleks pergudangan fiktif masa pendudukan Jepang di Indonesia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

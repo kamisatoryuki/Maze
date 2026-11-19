@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>SCC Maze Challenge</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#070b17;color:#dff6ff;font-family:"Courier New",monospace;overflow:hidden;user-select:none;touch-action:none}
+canvas#c{position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated}
+#hud{position:fixed;top:0;left:0;right:0;display:none;justify-content:space-between;align-items:flex-start;padding:max(8px,env(safe-area-inset-top)) 10px 0;pointer-events:none;z-index:5}
+body.play #hud{display:flex}
+.pill{background:#0b1226cc;border:2px solid #22d3ee55;padding:5px 9px;margin-bottom:4px;font-size:15px;font-weight:bold;white-space:nowrap}
+#hl{font-size:13px}#hr{text-align:right}
+#mm{width:150px;height:150px;image-rendering:pixelated;border:2px solid #22d3ee88;background:#000;display:block}
+#msg{position:fixed;top:30%;left:50%;transform:translateX(-50%);background:#0b1226ee;border:2px solid #22d3ee;padding:8px 14px;display:none;z-index:6;text-align:center;max-width:90%}
+#ctl{display:none;position:fixed;inset:auto 0 0 0;height:170px;z-index:5;pointer-events:none}
+body.play #ctl.on{display:block}
+#joy{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));width:120px;height:120px;border-radius:50%;background:#0b1226aa;border:3px solid #22d3ee88;pointer-events:auto;touch-action:none}
+#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:#22d3eecc}
+.cb{position:absolute;right:18px;width:74px;height:74px;border-radius:50%;background:#0b1226cc;border:3px solid #22d3ee;color:#22d3ee;font:bold 20px "Courier New";pointer-events:auto;touch-action:none}
+#bE{bottom:40px}#bP{bottom:128px;width:48px;height:48px;font-size:16px;right:30px}
+.scr{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:#070b17ee;z-index:10;text-align:center;padding:16px;overflow:auto}
+.scr.on{display:flex}
+h1{margin:0 0 6px;font-size:clamp(28px,7vw,52px);color:#22d3ee;text-shadow:4px 4px 0 #0e3a52;letter-spacing:2px}
+h2{color:#22d3ee;margin:6px 0 12px}
+p{max-width:520px;line-height:1.5;margin:6px 0}
+.btn{display:block;margin:6px auto;min-width:230px;padding:13px 18px;background:#12203f;color:#dff6ff;border:3px solid #22d3ee;font:bold 17px "Courier New";cursor:pointer}
+.btn:hover,.btn:active{background:#22d3ee;color:#07101f}
+.sm{color:#8fb4cc;font-size:14px}
+#q{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#02050ccc;z-index:12;padding:12px}
+#q.on{display:flex}
+#qb{background:#0e1630;border:3px solid #22d3ee;padding:16px;width:min(560px,100%);max-height:100%;overflow:auto}
+#qc{color:#22d3ee;font-size:13px}#qt{font-size:19px;margin:8px 0 12px;line-height:1.35}
+#qbar{height:8px;background:#1b2a50;margin-bottom:10px;display:none}#qbi{height:100%;background:#22d3ee;width:100%}
+.opt{display:block;width:100%;text-align:left;margin:7px 0;padding:12px;background:#12203f;color:#dff6ff;border:2px solid #36507f;font:16px "Courier New";cursor:pointer}
+.opt:hover{border-color:#22d3ee}.opt.ok{background:#14532d;border-color:#4ade80}.opt.no{background:#5b1a1a;border-color:#f87171}
+#qf{min-height:22px;margin-top:6px;font-weight:bold}
+#audio .vol{display:flex;align-items:center;gap:10px;width:min(430px,92vw);margin:10px 0;font-size:15px}
+#audio .vol input{flex:1;accent-color:#22d3ee;height:24px;background:transparent}
+#audio .vol span{width:52px;text-align:right;color:#8fb4cc;font-size:13px}
+#audStat{color:#8fb4cc;font-size:13px;min-height:18px}
+#audQ{pointer-events:auto;cursor:pointer;color:#22d3ee}
+#audQ.muted{color:#8fb4cc;opacity:.7}
+table{border-collapse:collapse;margin:8px auto}td{padding:3px 12px;border-bottom:1px solid #22d3ee33;text-align:left}
+/* ---- tambahan: FX, HUD, papan skor, pengaturan, tombol lanjut kuis ---- */
+#flash{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:8}
+@keyframes healPulse{40%{background:#14532dcc;border-color:#4ade80;box-shadow:0 0 16px #4ade8099}}
+#hp.heal{animation:healPulse .9s}
+@keyframes dmgPulse{40%{background:#5b1a1acc;border-color:#f87171}}
+#hp.dmg{animation:dmgPulse .9s}
+#stk{color:#fbbf24;border-color:#fbbf2455}
+#bPd{pointer-events:auto;cursor:pointer;color:#dff6ff;display:block;margin:0 0 6px auto;font-family:"Courier New",monospace}
+#nameIn{background:#12203f;color:#dff6ff;border:2px solid #22d3ee;font:16px "Courier New",monospace;padding:10px;width:min(280px,84vw);text-align:center;margin:4px 0}
+th{color:#8fb4cc;font-size:13px;border-bottom:2px solid #22d3ee55;text-align:left;padding:3px 12px}
+tr.new td{background:#12325a;border-bottom:1px solid #22d3ee88}
+.dbtn{display:inline-block;min-width:0;padding:9px 16px;font-size:15px;margin:4px}
+.dbtn.sel{background:#22d3ee;color:#07101f}
+#qCont{min-width:180px;padding:10px;margin:10px auto 0;background:#14532d;border-color:#4ade80}
+#qCont:hover,#qCont:active{background:#4ade80;color:#07101f}
+@media(max-width:600px){#mm{width:100px;height:100px}.pill{font-size:13px;padding:4px 6px}}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="hud"><div id="hl"><div class="pill" id="tm">00:00.0</div><div class="pill" id="hp"></div><div class="pill" id="stk">🔥 0</div><div class="pill" id="ky"></div><div class="pill" id="audQ">🔊</div></div><div id="hr"><button class="pill" id="bPd">⏸ PAUSE</button><canvas id="mm" width="180" height="180"></canvas></div></div>
+<div id="flash"></div>
+<div id="msg"></div>
+<div id="ctl"><div id="joy"><div id="knob"></div></div><button class="cb" id="bP">II</button><button class="cb" id="bE">E</button></div>
+
+<div class="scr on" id="menu"><h1>SCC MAZE<br>CHALLENGE</h1><p class="sm">Stematel Creative Challenge</p>
+<p>Kumpulkan 5 kunci, hindari monster, lalu temukan pintu keluar secepat mungkin!</p>
+<p id="pbt" class="sm"></p>
+<button class="btn" id="bStart">MULAI</button><button class="btn" id="bCont" style="display:none">LANJUTKAN PROGRES</button><button class="btn" id="bHow">CARA BERMAIN</button><button class="btn" id="bSetMenu">PENGATURAN</button><button class="btn" id="bBoardMenu">PAPAN SKOR</button></div>
+
+<div class="scr" id="how"><h2>CARA BERMAIN</h2>
+<p>Tujuan: kumpulkan <b>5 kunci</b> lalu capai <b>pintu keluar</b> (kotak hijau di pojok kanan bawah). Waktu tercepat menang!</p>
+<p><b>Gerak:</b> WASD / Panah. <b>Interaksi:</b> E / Spasi di dekat pintu kayu. <b>Pause:</b> ESC.<br>HP: joystick kiri, tombol E dan II di kanan.</p>
+<p><b>Pintu kayu:</b> jawab soal dengan benar, pintu terbuka 12 detik. Jawaban salah tidak mengurangi nyawa; coba lagi.</p>
+<p><b>Monster:</b> jika tertangkap, jawab soal hitungan dalam 10 detik. Salah/waktu habis = nyawa -1 (kamu punya 5). Setelah itu kamu kebal sebentar. Monster berpatroli di lorong; mereka mulai mengejar hanya jika kamu mendekat, dan berhenti mengejar lalu kembali ke posnya bila kamu cukup menjauh.</p>
+<p><b>Spike:</b> jebakan duri berputar. Aman 3 detik, peringatan 1,2 detik, lalu aktif 1,2 detik. Garis waktu di atas spike menunjukkan sisa waktunya. Saat aktif, spike tidak bisa dilewati. Jika tertusuk: gerak melambat dan waktu +3 detik (nyawa tidak berkurang).</p>
+<p><b>Audio:</b> musik dan efek suara aktif setelah kamu menekan tombol. Atur volume musik/efek atau matikan suara lewat menu AUDIO atau tombol M.</p>
+<p><b>Nyawa:</b> mulai dengan 5 nyawa. Setiap <b>3 jawaban benar beruntun</b> memulihkan 1 nyawa (maksimal 5). Jawaban salah/waktu habis pada soal monster mengurangi 1 nyawa.</p>
+<p><b>Papan skor:</b> hasil permainan yang <b>selesai</b> tersimpan <b>lokal di browser ini saja</b> (bukan global, tidak tersinkron antar perangkat). <b>Pengaturan:</b> volume, kesulitan, sensitivitas joystick. <b>Pause:</b> ESC atau tombol ⏸ PAUSE di pojok kanan atas. <b>Progres</b> terakhir otomatis disimpan — bisa dilanjutkan dari menu utama.</p>
+<button class="btn" id="bBack">KEMBALI</button></div>
+
+<div class="scr" id="pause"><h2>PAUSE</h2><button class="btn" id="bRes">LANJUT</button><button class="btn" id="bSetPause">PENGATURAN</button><button class="btn" id="bRst">RESTART</button><button class="btn" id="bMenu">MENU UTAMA</button></div>
+<div class="scr" id="win"><h1>KAMU KELUAR!</h1><div id="ws"></div><p class="sm">Masukkan nama untuk pencatatan papan skor lokal:</p><input id="nameIn" maxlength="16" placeholder="Nama kamu" autocomplete="off"><button class="btn" id="bSaveScore">SIMPAN KE PAPAN SKOR</button><button class="btn" id="bBoardWin">LIHAT PAPAN SKOR</button><button class="btn" id="bRst2">MAIN LAGI</button><button class="btn" id="bMenu2">MENU UTAMA</button></div>
+<div class="scr" id="over"><h1 style="color:#f87171">GAME OVER</h1><div id="os"></div><button class="btn" id="bRst3">COBA LAGI</button><button class="btn" id="bMenu3">MENU UTAMA</button></div>
+<div class="scr" id="settings"><h2>PENGATURAN</h2>
+<label class="vol">Musik <input id="volBgm" type="range" min="0" max="100" value="35"><span id="volBgmVal">35%</span></label>
+<label class="vol">Efek suara <input id="volSfx" type="range" min="0" max="100" value="60"><span id="volSfxVal">60%</span></label>
+<label class="vol">Sensitivitas joystick <input id="volSens" type="range" min="10" max="50" value="20"><span id="volSensVal">20%</span></label>
+<p id="audStat" class="sm">Musik dan efek suara dibuat langsung dengan Web Audio (8-bit, tanpa aset berhak cipta).</p>
+<button class="btn" id="bMute">MATIKAN SUARA</button>
+<p class="sm" style="margin-top:14px">Kesulitan (memengaruhi kecepatan &amp; jarak pandang monster):</p>
+<div><button class="btn dbtn" id="dMudah">MUDAH</button><button class="btn dbtn" id="dNormal">NORMAL</button><button class="btn dbtn" id="dSulit">SULIT</button></div>
+<p class="sm" style="margin-top:14px">Setelan tersimpan otomatis di browser ini dan tidak ikut ter-reset saat bermain.</p>
+<button class="btn" id="bAudioBack">KEMBALI</button></div>
+<div class="scr" id="board"><h2>PAPAN SKOR (LOKAL)</h2>
+<p class="sm" style="max-width:560px">Data disimpan secara <b>lokal</b> di browser/perangkat ini (localStorage) — <b>bukan</b> papan skor global dan tidak tersinkron antar perangkat. Hanya permainan yang <b>selesai</b> (berhasil keluar maze) yang tercatat. 10 skor terbaik ditampilkan; skor sama diurutkan dari waktu tercepat.</p>
+<div id="lbBody"></div>
+<div id="cf" style="display:none"><p style="color:#f87171"><b>Hapus SEMUA data papan skor?</b></p><button class="btn" id="bClrYes" style="border-color:#f87171">HAPUS</button><button class="btn" id="bClrNo">BATAL</button></div>
+<button class="btn" id="bClr">HAPUS DATA PAPAN SKOR</button>
+<button class="btn" id="bBoardBack">KEMBALI</button></div>
+<div id="q"><div id="qb"><div id="qc"></div><div id="qt"></div><div id="qbar"><div id="qbi"></div></div><div id="qo"></div><div id="qf"></div><button class="btn" id="qCont" style="display:none">LANJUT ▶ <span id="qContT">(10s)</span></button></div></div>
+
+<script id="core">
+const W=45,SEED=2026,TRAP_CYCLE=5.4,TRAP_SAFE=3,TRAP_WARN=1.2,TRAP_ACTIVE=1.2;
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
+function nOpen(g,x,y){let n=0;for(const[a,b]of DIRS)if(!g[(y+b)*W+x+a])n++;return n}
+function bfs(g,sx,sy,blk){const d=new Int32Array(W*W).fill(-1),q=[sy*W+sx];d[q[0]]=0;
+ for(let h=0;h<q.length;h++){const i=q[h],x=i%W,y=(i/W)|0;
+  for(const[a,b]of DIRS){const j=(y+b)*W+x+a;if(j<0||j>=W*W||g[j]||d[j]>=0||(blk&&blk[j]))continue;d[j]=d[i]+1;q.push(j)}}return d}
+function layout(seed){
+ const R=rng(seed),g=new Uint8Array(W*W).fill(1),st=[[1,1]];g[W+1]=0;
+ while(st.length){const[x,y]=st[st.length-1];
+  const d=[[2,0],[-2,0],[0,2],[0,-2]].filter(([a,b])=>{const nx=x+a,ny=y+b;return nx>0&&ny>0&&nx<W-1&&ny<W-1&&g[ny*W+nx]});
+  if(!d.length){st.pop();continue}
+  const[a,b]=d[Math.floor(R()*d.length)];g[(y+b/2)*W+x+a/2]=0;g[(y+b)*W+x+a]=0;st.push([x+a,y+b])}
+ for(let y=1;y<W;y+=2)for(let x=1;x<W;x+=2)if(nOpen(g,x,y)===1&&R()<.2){
+  const c=DIRS.filter(([a,b])=>{const nx=x+a,ny=y+b;return nx>0&&ny>0&&nx<W-1&&ny<W-1&&g[ny*W+nx]});
+  const[a,b]=c[Math.floor(R()*c.length)];g[(y+b)*W+x+a]=0}
+ const cells=[];for(let y=1;y<W;y+=2)for(let x=1;x<W;x+=2)cells.push([x,y]);
+ const ex=[W-2,W-2],d0=bfs(g,1,1);
+ // kunci: dead-end saling berjauhan
+ const de=cells.filter(([x,y])=>nOpen(g,x,y)===1&&d0[y*W+x]>20);
+ const keys=[];let md=de.map(([x,y])=>d0[y*W+x]);
+ for(let k=0;k<5;k++){let bi=0;for(let i=1;i<de.length;i++)if(md[i]>md[bi])bi=i;
+  const[kx,ky]=de[bi];keys.push([kx,ky]);const dk=bfs(g,kx,ky);md=md.map((m,i)=>Math.min(m,dk[de[i][1]*W+de[i][0]]));md[bi]=-1}
+ // pintu soal: pada jalur terpendek start->exit, di tile lorong
+ const path=[];{const de2=bfs(g,ex[0],ex[1]);let x=1,y=1;path.push([x,y]);
+  while(x!==ex[0]||y!==ex[1]){for(const[a,b]of DIRS){const j=(y+b)*W+x+a;if(de2[j]>=0&&de2[j]===de2[y*W+x]-1){x+=a;y+=b;path.push([x,y]);break}}}}
+ const doors=[];for(const f of[.2,.4,.6,.8]){let i=Math.floor(path.length*f);
+  while(i<path.length&&!((path[i][0]+path[i][1])&1))i++;doors.push(path[i][1]*W+path[i][0])}
+ const used=new Set(doors);keys.forEach(k=>used.add(k[1]*W+k[0]));used.add(ex[1]*W+ex[0]);
+ // Spike traps: only in corridors/strategic cells, away from start, keys, quiz doors and exit.
+ const traps=[],trapOffsets=[];
+ while(traps.length<12){
+   const[x,y]=cells[Math.floor(R()*cells.length)],j=y*W+x;
+   if(d0[j]<=12||used.has(j)||traps.includes(j))continue;
+   if(nOpen(g,x,y)<2)continue;
+   if(traps.some(t=>Math.abs(t%W-x)+Math.abs(((t/W)|0)-y)<=2))continue;
+   if(doors.some(d=>Math.abs(d%W-x)+Math.abs(((d/W)|0)-y)<=2))continue;
+   traps.push(j);trapOffsets.push(R()*TRAP_CYCLE)}
+ // Safety fallback in case the strict placement rules leave a gap.
+ let guard=0;
+ while(traps.length<12&&guard++<4000){
+   const[x,y]=cells[Math.floor(R()*cells.length)],j=y*W+x;
+   if(d0[j]<=8||used.has(j)||traps.includes(j))continue;
+   traps.push(j);trapOffsets.push(R()*TRAP_CYCLE)}
+ const mons=[];while(mons.length<7){const[x,y]=cells[Math.floor(R()*cells.length)];if(d0[y*W+x]>18)mons.push([x,y])}
+ return{g,cells,keys,doors,traps,trapOffsets,mons,ex}}
+if(typeof module!=='undefined')module.exports={W,layout,bfs,nOpen};
+</script>
+<script>
+const $=id=>document.getElementById(id),cv=$('c'),cx=cv.getContext('2d'),mm=$('mm'),mx=mm.getContext('2d');
+// Answer keys are stored as option 0 below. pickQuestion() relocates each correct
+// answer into a balanced, seeded position bag at runtime so displayed positions vary.
+const BANK=[
+  {"c":"Matematika","q":"Hasil dari 48 ÷ 6 + 7 × 3 adalah ...","o":["29","45","27","18"],"a":0,"e":"Kerjakan pembagian dan perkalian lebih dahulu: 48 ÷ 6 = 8 dan 7 × 3 = 21, lalu 8 + 21 = 29."},
+  {"c":"Matematika","q":"Hasil dari -12 + 7 - (-5) adalah ...","o":["0","-10","10","-14"],"a":0,"e":"-12 + 7 = -5. Karena dikurangi bilangan negatif, -(-5) = +5, sehingga -5 + 5 = 0."},
+  {"c":"Matematika","q":"Hasil dari 3/4 + 2/3 adalah ...","o":["17/12","5/7","5/12","1 7/12"],"a":0,"e":"Samakan penyebut menjadi 12: 9/12 + 8/12 = 17/12 atau 1 5/12."},
+  {"c":"Matematika","q":"Hasil dari 0,75 × 0,4 adalah ...","o":["0,3","0,03","3,0","0,075"],"a":0,"e":"75 × 4 = 300. Dua angka di belakang koma, sehingga hasilnya 0,30 atau 0,3."},
+  {"c":"Matematika","q":"25% dari 360 adalah ...","o":["90","72","100","45"],"a":0,"e":"25% sama dengan 1/4, maka 360 ÷ 4 = 90."},
+  {"c":"Matematika","q":"Perbandingan dua bilangan adalah 3 : 5. Jika jumlahnya 64, bilangan yang lebih besar adalah ...","o":["40","24","32","48"],"a":0,"e":"Jumlah bagian = 3 + 5 = 8. Satu bagian = 64 ÷ 8 = 8. Bilangan terbesar = 5 × 8 = 40."},
+  {"c":"Matematika","q":"Nilai x yang memenuhi 4x - 7 = 29 adalah ...","o":["9","5,5","8","11"],"a":0,"e":"Tambahkan 7 ke kedua ruas: 4x = 36, lalu bagi 4 sehingga x = 9."},
+  {"c":"Matematika","q":"Hasil dari 2³ × 3² adalah ...","o":["72","36","54","18"],"a":0,"e":"2³ = 8 dan 3² = 9, sehingga 8 × 9 = 72."},
+  {"c":"Matematika","q":"Keliling persegi panjang dengan panjang 12 cm dan lebar 8 cm adalah ...","o":["40 cm","96 cm","20 cm","48 cm"],"a":0,"e":"Keliling persegi panjang = 2 × (panjang + lebar) = 2 × (12 + 8) = 40 cm."},
+  {"c":"Matematika","q":"Luas segitiga dengan alas 14 cm dan tinggi 9 cm adalah ...","o":["63 cm²","126 cm²","46 cm²","23 cm²"],"a":0,"e":"Luas segitiga = 1/2 × alas × tinggi = 1/2 × 14 × 9 = 63 cm²."},
+  {"c":"Matematika","q":"Volume kubus dengan panjang rusuk 6 cm adalah ...","o":["216 cm³","36 cm³","108 cm³","144 cm³"],"a":0,"e":"Volume kubus = rusuk³ = 6 × 6 × 6 = 216 cm³."},
+  {"c":"Matematika","q":"15% dari Rp80.000 adalah ...","o":["Rp12.000","Rp8.000","Rp1.200","Rp16.000"],"a":0,"e":"10% dari 80.000 = 8.000 dan 5% = 4.000, sehingga 15% = 12.000."},
+  {"c":"Matematika","q":"Hasil dari 2/5 × 45 adalah ...","o":["18","9","22,5","27"],"a":0,"e":"45 ÷ 5 = 9, lalu 9 × 2 = 18."},
+  {"c":"Matematika","q":"Hasil dari 7 - 2 × (-3) adalah ...","o":["13","-13","15","3"],"a":0,"e":"Kerjakan perkalian dahulu: 2 × (-3) = -6, lalu 7 - (-6) = 7 + 6 = 13."},
+  {"c":"Matematika","q":"Bentuk persen dari 5/8 adalah ...","o":["62,5%","58%","62%","80%"],"a":0,"e":"5 ÷ 8 = 0,625, sehingga sama dengan 62,5%."},
+  {"c":"Matematika","q":"Harga 3 buku tulis Rp18.000. Harga 5 buku tulis yang sama adalah ...","o":["Rp30.000","Rp24.000","Rp36.000","Rp27.000"],"a":0,"e":"Harga satu buku = 18.000 ÷ 3 = 6.000, maka 5 buku = 5 × 6.000 = 30.000."},
+  {"c":"Matematika","q":"Bentuk paling sederhana dari 18/24 adalah ...","o":["3/4","2/3","9/12","6/8"],"a":0,"e":"Faktor persekutuan terbesar 18 dan 24 adalah 6, sehingga 18/24 = 3/4."},
+  {"c":"Matematika","q":"Hasil dari 12 - 4 ÷ 2 + 3 adalah ...","o":["13","7","10","11"],"a":0,"e":"Pembagian dikerjakan dahulu: 4 ÷ 2 = 2, lalu 12 - 2 + 3 = 13."},
+  {"c":"Matematika","q":"Jika 6x - 5 = 37, maka nilai x adalah ...","o":["7","6","8","5"],"a":0,"e":"6x = 37 + 5 = 42, sehingga x = 42 ÷ 6 = 7."},
+  {"c":"Matematika","q":"Hasil dari 0,6 ÷ 0,2 adalah ...","o":["3","0,3","0,03","30"],"a":0,"e":"0,6 ÷ 0,2 sama dengan 6 ÷ 2 = 3."},
+  {"c":"Matematika","q":"Nilai x yang memenuhi 3x + 2 = x + 10 adalah ...","o":["4","3","6","8"],"a":0,"e":"Kumpulkan suku x: 3x - x = 10 - 2, sehingga 2x = 8 dan x = 4."},
+  {"c":"Matematika","q":"Luas sebuah persegi adalah 49 cm². Kelilingnya adalah ...","o":["28 cm","14 cm","21 cm","49 cm"],"a":0,"e":"Sisi persegi = √49 = 7 cm, maka keliling = 4 × 7 = 28 cm."},
+  {"c":"Matematika","q":"Hasil dari 2 1/4 + 1 1/2 adalah ...","o":["3 3/4","3 1/4","3 1/2","4 1/4"],"a":0,"e":"Ubah ke desimal: 2,25 + 1,5 = 3,75 atau 3 3/4."},
+  {"c":"Matematika","q":"40 adalah ... persen dari 160.","o":["25%","20%","40%","32%"],"a":0,"e":"40/160 = 1/4 = 0,25, sehingga sama dengan 25%."},
+  {"c":"Matematika","q":"Rata-rata dari 8, 12, 16, dan 20 adalah ...","o":["14","12","16","15"],"a":0,"e":"Jumlah data = 8 + 12 + 16 + 20 = 56. Rata-rata = 56 ÷ 4 = 14."},
+  {"c":"Matematika","q":"Hasil dari 2,5 kg + 750 gram adalah ...","o":["3,25 kg","3,5 kg","3,75 kg","2,75 kg"],"a":0,"e":"750 gram = 0,75 kg, sehingga 2,5 + 0,75 = 3,25 kg."},
+  {"c":"Matematika","q":"Uang Rp1.200.000 ditabung dengan bunga 5% per tahun. Bunga setelah 8 bulan adalah ...","o":["Rp40.000","Rp60.000","Rp30.000","Rp50.000"],"a":0,"e":"Bunga satu tahun = 5% × 1.200.000 = 60.000. Bunga 8 bulan = 8/12 × 60.000 = 40.000."},
+  {"c":"Matematika","q":"Sebuah sepeda menempuh jarak 24 km dalam 2 jam. Kecepatan rata-ratanya adalah ...","o":["12 km/jam","48 km/jam","6 km/jam","24 km/jam"],"a":0,"e":"Kecepatan = jarak ÷ waktu = 24 ÷ 2 = 12 km/jam."},
+  {"c":"Matematika","q":"Jika x = -3, nilai dari 2x² - 5x adalah ...","o":["33","3","21","18"],"a":0,"e":"2 × (-3)² - 5 × (-3) = 2 × 9 + 15 = 18 + 15 = 33."},
+  {"c":"Matematika","q":"Hasil dari (2/3) ÷ (4/9) adalah ...","o":["3/2","8/27","27/8","2/3"],"a":0,"e":"Membagi pecahan sama dengan mengalikan kebalikannya: 2/3 × 9/4 = 18/12 = 3/2."},
+  {"c":"Matematika","q":"Sebuah segitiga siku-siku memiliki sisi tegak 6 cm dan 8 cm. Panjang sisi miringnya adalah ...","o":["10 cm","14 cm","48 cm","12 cm"],"a":0,"e":"Teorema Pythagoras: sisi miring = √(6² + 8²) = √(36 + 64) = √100 = 10 cm. Menjumlahkan sisi (14) atau mengalikan (48) adalah kekeliruan umum."},
+  {"c":"Matematika","q":"Akar-akar persamaan x² - 5x + 6 = 0 adalah ...","o":["x = 2 atau x = 3","x = -2 atau x = -3","x = 1 atau x = 6","x = -1 atau x = -6"],"a":0,"e":"Faktorisasi: x² - 5x + 6 = (x - 2)(x - 3) = 0, sehingga x = 2 atau x = 3. Kesalahan tanda menghasilkan akar negatif."},
+  {"c":"Matematika","q":"Bentuk paling sederhana dari √50 adalah ...","o":["5√2","2√5","25√2","10√2"],"a":0,"e":"50 = 25 × 2, sehingga √50 = √25 × √2 = 5√2. Perhatikan 10√2 sebenarnya sama dengan √200, jadi bukan jawaban."},
+  {"c":"Matematika","q":"Pohon yang tingginya 12 m mempunyai bayangan 8 m. Pada saat yang sama, bayangan sebuah tiang bendera 2 m. Tinggi tiang bendera adalah ...","o":["3 m","4 m","2,5 m","6 m"],"a":0,"e":"Segitiga-segitiganya sebangun, sehingga tinggi/bayangan konstan: t/2 = 12/8, maka t = 24/8 = 3 m."},
+  {"c":"Matematika","q":"Luas lingkaran dengan jari-jari 7 cm adalah ... (π = 22/7)","o":["154 cm²","44 cm²","308 cm²","49 cm²"],"a":0,"e":"Luas = π r² = 22/7 × 7² = 22/7 × 49 = 154 cm². Opsi 44 cm² adalah keliling (2πr), bukan luas."},
+  {"c":"Matematika","q":"Median dari data 12, 4, 10, 6, 8, 14 adalah ...","o":["9","8","10","8,5"],"a":0,"e":"Urutkan dahulu: 4, 6, 8, 10, 12, 14. Median = rata-rata dua nilai tengah = (8 + 10) ÷ 2 = 9."},
+  {"c":"Matematika","q":"Pada pelemparan satu dadu, peluang muncul mata dadu genap adalah ...","o":["1/2","1/3","1/6","2/3"],"a":0,"e":"Mata genap ada 3 (2, 4, 6) dari 6 kemungkinan, sehingga peluang = 3/6 = 1/2."},
+  {"c":"Matematika","q":"Hasil dari (-2)⁴ - 2⁴ adalah ...","o":["0","-32","16","32"],"a":0,"e":"Bilangan negatif berpangkat genap bernilai positif: (-2)⁴ = 16 dan 2⁴ = 16, sehingga 16 - 16 = 0."},
+  {"c":"Matematika","q":"Titik A(3, -2) digeser oleh translasi T = (2, 5). Koordinat bayangan A' adalah ...","o":["A'(5, 3)","A'(5, -7)","A'(1, 3)","A'(6, -10)"],"a":0,"e":"A' = (3 + 2, -2 + 5) = (5, 3). Kesalahan umum: kebingungan saat menjumlahkan bilangan negatif pada sumbu y."},
+  {"c":"Matematika","q":"Penyelesaian sistem persamaan 2x + y = 8 dan x - y = 1 adalah ...","o":["x = 3, y = 2","x = 2, y = 4","x = 4, y = 0","x = 1, y = 6"],"a":0,"e":"Jumlahkan kedua persamaan: 3x = 9, sehingga x = 3. Substitusi ke x - y = 1: y = 3 - 1 = 2."},
+  {"c":"IPS","q":"Ibu kota Provinsi Jawa Tengah adalah ...","o":["Semarang","Surabaya","Bandung","Yogyakarta"],"a":0,"e":"Kota Semarang adalah ibu kota Provinsi Jawa Tengah."},
+  {"c":"IPS","q":"Kenaikan harga barang dan jasa secara umum dan terus-menerus disebut ...","o":["Inflasi","Deflasi","Devaluasi","Kontraksi"],"a":0,"e":"Inflasi adalah kenaikan harga secara umum dan terus-menerus dalam periode tertentu; deflasi kebalikannya."},
+  {"c":"IPS","q":"Pajak yang dikenakan atas penghasilan wajib pajak disebut ...","o":["Pajak Penghasilan (PPh)","Pajak Pertambahan Nilai (PPN)","Pajak Bumi dan Bangunan","Bea Cukai"],"a":0,"e":"Pajak Penghasilan atau PPh adalah pajak yang dipungut dari penghasilan seseorang atau badan."},
+  {"c":"IPS","q":"APBN adalah singkatan dari ...","o":["Anggaran Pendapatan dan Belanja Negara","Anggaran Penduduk dan Belanja Nasional","Alokasi Pendapatan dan Bantuan Negara","Angkatan Pembantu Belanda Negara"],"a":0,"e":"APBN (Anggaran Pendapatan dan Belanja Negara) memuat rencana penerimaan dan pengeluaran negara selama satu tahun."},
+  {"c":"IPS","q":"Benua terkecil di dunia adalah ...","o":["Australia","Eropa","Antartika","Amerika Selatan"],"a":0,"e":"Australia (Oseania) merupakan benua terkecil di dunia."},
+  {"c":"IPS","q":"Salah satu dampak positif globalisasi bagi pelajar adalah ...","o":["Lebih mudah memperoleh informasi dan wawasan dunia","Budaya lokal langsung hilang","Perdagangan antarnegara terhenti","Tenaga kerja lokal dilarang bekerja"],"a":0,"e":"Globalisasi mempermudah pertukaran informasi, ilmu pengetahuan, dan teknologi antarnegara."},
+  {"c":"IPS","q":"Penduduk yang mampu dan siap bekerja tetapi belum mendapat pekerjaan disebut ...","o":["Pengangguran","Pebisnis","Pensiunan","Pejabat"],"a":0,"e":"Pengangguran adalah angkatan kerja yang tidak mendapatkan pekerjaan meskipun pencariannya aktif."},
+  {"c":"IPS","q":"Salah satu upaya yang tepat untuk mengurangi pengangguran di suatu daerah adalah ...","o":["Membuka lapangan kerja baru melalui usaha mikro","Memperkecil gaji seluruh pekerja","Menutup seluruh pabrik yang ada","Menghentikan pendidikan kejuruan"],"a":0,"e":"Pengembangan usaha mikro dan kecil menyerap tenaga kerja sehingga jumlah penganggur berkurang."},
+  {"c":"IPS","q":"Organisasi dunia yang bertugas menjaga perdamaian dan didirikan pada 24 Oktober 1945 adalah ...","o":["PBB (Perserikatan Bangsa-Bangsa)","ASEAN","OPEC","WTO"],"a":0,"e":"PBB (Perserikatan Bangsa-Bangsa) didirikan setelah Perang Dunia II untuk menjaga perdamaian dunia."},
+  {"c":"IPS","q":"Semboyan Bhinneka Tunggal Ika bermakna ...","o":["Berbeda-beda tetapi tetap satu","Bersatu dalam satu tuhan","Satu bangsa tanpa perbedaan","Berbeda tujuan satu jalur"],"a":0,"e":"Bhinneka Tunggal Ika berarti walaupun berbeda-beda suku, agama, dan budaya, bangsa Indonesia tetap satu kesatuan."},
+  {"c":"IPS","q":"Contoh sikap menjaga persatuan sesuai sila ketiga Pancasila adalah ...","o":["Membina rasa gotong royong","Memaksakan pendapat pribadi","Menghina suku lain","Mengutamakan kepentingan golongan"],"a":0,"e":"Sila ketiga, Persatuan Indonesia, dilaksanakan melalui kerja sama dan rasa kekeluargaan seperti gotong royong."},
+  {"c":"IPS","q":"Kegiatan menukar barang dengan barang disebut ...","o":["Barter","Ekspor","Investasi","Konsumsi"],"a":0,"e":"Barter adalah kegiatan tukar-menukar barang tanpa menggunakan uang."},
+  {"c":"IPS","q":"Garis khayal yang membagi bumi menjadi belahan utara dan selatan adalah ...","o":["Khatulistiwa","Meridian","Garis Wallace","Garis Weber"],"a":0,"e":"Garis khatulistiwa atau ekuator membagi bumi menjadi belahan utara dan selatan."},
+  {"c":"IPS","q":"Benua terluas di dunia adalah ...","o":["Asia","Afrika","Eropa","Australia"],"a":0,"e":"Asia merupakan benua terluas dengan jumlah penduduk terbanyak."},
+  {"c":"IPS","q":"Kegiatan membeli barang dari luar negeri disebut ...","o":["Impor","Ekspor","Barter","Distribusi"],"a":0,"e":"Impor adalah kegiatan memasukkan atau membeli barang dari luar negeri."},
+  {"c":"IPS","q":"Indonesia terletak di antara Samudra Hindia dan Samudra ...","o":["Pasifik","Atlantik","Arktik","Antartika"],"a":0,"e":"Secara geografis Indonesia diapit Samudra Hindia dan Samudra Pasifik."},
+  {"c":"IPS","q":"Letak astronomis Indonesia adalah ...","o":["6°LU-11°LS dan 95°BT-141°BT","6°LU-11°LU dan 95°BB-141°BB","11°LS-6°LS dan 95°BB-141°BT","6°LS-11°LU dan 95°BT-141°BB"],"a":0,"e":"Indonesia terletak antara 6°LU sampai 11°LS dan 95°BT sampai 141°BT."},
+  {"c":"IPS","q":"Gunung tertinggi di Indonesia adalah ...","o":["Puncak Jaya","Gunung Semeru","Gunung Kerinci","Gunung Rinjani"],"a":0,"e":"Puncak Jaya di Papua adalah gunung tertinggi di Indonesia dengan ketinggian sekitar 4.884 meter."},
+  {"c":"IPS","q":"Danau terluas di Indonesia adalah ...","o":["Danau Toba","Danau Sentani","Danau Singkarak","Danau Kelimutu"],"a":0,"e":"Danau Toba di Sumatra Utara merupakan danau terluas di Indonesia."},
+  {"c":"IPS","q":"Selat yang memisahkan Pulau Jawa dan Pulau Sumatra adalah ...","o":["Selat Sunda","Selat Malaka","Selat Bali","Selat Lombok"],"a":0,"e":"Selat Sunda terletak antara Pulau Sumatra dan Pulau Jawa."},
+  {"c":"IPS","q":"Ibu kota Provinsi Kalimantan Timur adalah ...","o":["Samarinda","Balikpapan","Banjarmasin","Pontianak"],"a":0,"e":"Samarinda adalah ibu kota Provinsi Kalimantan Timur."},
+  {"c":"IPS","q":"ASEAN didirikan pada ...","o":["8 Agustus 1967","17 Agustus 1945","28 Oktober 1928","1 Juni 1945"],"a":0,"e":"ASEAN didirikan pada 8 Agustus 1967 di Bangkok, Thailand."},
+  {"c":"IPS","q":"Negara anggota ASEAN yang tidak memiliki garis pantai adalah ...","o":["Laos","Kamboja","Vietnam","Thailand"],"a":0,"e":"Laos adalah negara ASEAN yang terkurung daratan atau landlocked."},
+  {"c":"IPS","q":"Iklim Indonesia bersifat tropis karena ...","o":["Terletak di garis khatulistiwa","Terletak di kutub utara","Berada di belahan bumi selatan","Dikelilingi pegunungan tinggi"],"a":0,"e":"Indonesia terletak di sekitar khatulistiwa sehingga mendapat sinar matahari sepanjang tahun."},
+  {"c":"IPS","q":"Angin muson barat di Indonesia menyebabkan ...","o":["Musim hujan","Musim kemarau","Musim dingin","Musim gugur"],"a":0,"e":"Angin muson barat bertiup dari Samudra Hindia dan membawa uap air sehingga terjadi musim hujan."},
+  {"c":"IPS","q":"Komoditas ekspor unggulan Indonesia dari sektor perkebunan adalah ...","o":["Kelapa sawit","Padi","Jagung","Kedelai"],"a":0,"e":"Kelapa sawit merupakan salah satu komoditas ekspor perkebunan unggulan Indonesia."},
+  {"c":"IPS","q":"Lembaga pemerintah yang bertugas menyediakan data statistik adalah ...","o":["Badan Pusat Statistik","BMKG","Bappenas","Kementerian Pendidikan"],"a":0,"e":"Badan Pusat Statistik atau BPS bertugas menyediakan data statistik nasional."},
+  {"c":"IPS","q":"Pada peta berskala 1 : 500.000, jarak 4 cm mewakili jarak sebenarnya ...","o":["20 km","2 km","200 km","50 km"],"a":0,"e":"Jarak sebenarnya = 4 × 500.000 = 2.000.000 cm = 20 km."},
+  {"c":"IPS","q":"Peta yang menunjukkan kepadatan penduduk termasuk jenis peta ...","o":["Tematik","Umum","Topografi","Kadaster"],"a":0,"e":"Peta tematik menyajikan tema atau informasi tertentu, seperti kepadatan penduduk."},
+  {"c":"IPS","q":"Contoh interaksi sosial asosiatif adalah ...","o":["Gotong royong","Tawuran","Konflik","Persaingan tidak sehat"],"a":0,"e":"Interaksi asosiatif mengarah pada kerja sama dan persatuan, seperti gotong royong."},
+  {"c":"IPS","q":"Lembaga sosial yang pertama kali dikenal seorang anak adalah ...","o":["Keluarga","Sekolah","Pemerintah","Pasar"],"a":0,"e":"Keluarga adalah lembaga sosial pertama tempat anak belajar nilai dan norma."},
+  {"c":"IPS","q":"Contoh kebutuhan primer adalah ...","o":["Makanan","Perhiasan","Liburan","Sepatu mahal"],"a":0,"e":"Kebutuhan primer adalah kebutuhan pokok yang harus dipenuhi, seperti makanan."},
+  {"c":"IPS","q":"Kegiatan menghasilkan barang atau jasa disebut ...","o":["Produksi","Konsumsi","Distribusi","Investasi"],"a":0,"e":"Produksi adalah kegiatan menghasilkan barang atau jasa untuk memenuhi kebutuhan."},
+  {"c":"IPS","q":"Jika harga suatu barang turun, jumlah permintaan umumnya ...","o":["Naik","Turun","Tetap","Hilang"],"a":0,"e":"Menurut hukum permintaan, harga turun cenderung membuat jumlah permintaan naik."},
+  {"c":"IPS","q":"Pasar tempat penjual dan pembeli bertemu langsung disebut ...","o":["Pasar konkret","Pasar abstrak","Pasar modal","Pasar tenaga kerja"],"a":0,"e":"Pasar konkret adalah pasar yang kegiatannya dilakukan secara langsung dan nyata."},
+  {"c":"IPS","q":"Kegiatan menjual barang ke luar negeri disebut ...","o":["Ekspor","Impor","Barter","Konsumsi"],"a":0,"e":"Ekspor adalah kegiatan menjual atau mengirim barang ke luar negeri."},
+  {"c":"IPS","q":"Letak geografis Indonesia adalah ...","o":["Di antara dua benua dan dua samudra","Di antara dua kutub","Di belahan bumi barat","Di kawasan Eropa"],"a":0,"e":"Indonesia terletak di antara Benua Asia dan Australia serta Samudra Hindia dan Pasifik."},
+  {"c":"IPS","q":"Suku Asmat berasal dari pulau ...","o":["Papua","Jawa","Bali","Sumatra"],"a":0,"e":"Suku Asmat merupakan salah satu suku asli yang mendiami pulau Papua."},
+  {"c":"IPS","q":"Rumah adat dari Jawa Tengah adalah ...","o":["Joglo","Gadang","Tongkonan","Honai"],"a":0,"e":"Rumah Joglo adalah rumah adat masyarakat Jawa Tengah dan Yogyakarta."},
+  {"c":"IPS","q":"Upaya menanam kembali hutan yang gundul disebut ...","o":["Reboisasi","Erosi","Abrasi","Urbanisasi"],"a":0,"e":"Reboisasi adalah penanaman kembali lahan hutan yang rusak atau gundul."},
+  {"c":"Sejarah Indonesia","q":"Kerajaan Hindu tertua di Indonesia adalah ...","o":["Kutai","Tarumanegara","Majapahit","Sriwijaya"],"a":0,"e":"Kerajaan Kutai di Kalimantan Timur (sekitar abad ke-4/5), yang dikenal melalui prasasti Yupa, dianggap kerajaan Hindu tertua di Indonesia."},
+  {"c":"Sejarah Indonesia","q":"Prasasti Yupa peninggalan Kerajaan Kutai ditulis dengan huruf ...","o":["Pallawa dan bahasa Sanskerta","Jawa Kuno dan bahasa Melayu","Arab dan bahasa Persia","Kawi dan bahasa Jawa"],"a":0,"e":"Prasasti Yupa ditulis menggunakan huruf Pallawa dan bahasa Sanskerta."},
+  {"c":"Sejarah Indonesia","q":"Tokoh yang memimpin perlawanan Perang Padri di Sumatra Barat adalah ...","o":["Tuanku Imam Bonjol","Sultan Hasanuddin","Pangeran Diponegoro","Kapitan Pattimura"],"a":0,"e":"Tuanku Imam Bonjol memimpin Perang Padri; ia ditangkap Belanda pada 1832 dan diasingkan ke Ambon."},
+  {"c":"Sejarah Indonesia","q":"Sisingamangaraja XII dikenal sebagai pahlawan perlawanan dari ...","o":["Tapanuli, Sumatra Utara","Sulawesi Selatan","Kalimantan Selatan","Jawa Tengah"],"a":0,"e":"Sisingamangaraja XII memimpin perlawanan masyarakat Batak di Tapanuli, Sumatra Utara, terhadap Belanda."},
+  {"c":"Sejarah Indonesia","q":"Serangan Umum 1 Maret 1949 berhasil merebut kembali kota ...","o":["Yogyakarta dari tangan Belanda","Bandung dari tangan Sekutu","Surabaya dari tangan Sekutu","Medan dari tangan Jepang"],"a":0,"e":"Serangan Umum 1 Maret 1949 merebut kembali Yogyakarta dan membuktikan kepada dunia bahwa Indonesia masih ada."},
+  {"c":"Sejarah Indonesia","q":"Belanda secara resmi mengakui kedaulatan Indonesia pada ...","o":["27 Desember 1949","17 Agustus 1945","10 November 1945","5 Juli 1959"],"a":0,"e":"Pengakuan kedaulatan Indonesia ditandatangani pada 27 Desember 1949 hasil Konferensi Meja Bundar."},
+  {"c":"Sejarah Indonesia","q":"Perundingan yang menghasilkan Perjanjian Renville (1948) dilaksanakan di ...","o":["Atas kapal perang Amerika Serikat, USS Renville","Istana Negara di Jakarta","Kantor Gubernur di Yogyakarta","Markas besar Belanda di Batavia"],"a":0,"e":"Perjanjian Renville ditandatangani pada 17 Januari 1948 di atas kapal perang Amerika Serikat USS Renville di teluk Jakarta."},
+  {"c":"Sejarah Indonesia","q":"Pahlawan wanita dari Jawa Barat yang mendirikan sekolah untuk perempuan pada 1904 adalah ...","o":["Dewi Sartika","Cut Nyak Dhien","Christina Martha Tiahahu","Cut Meutia"],"a":0,"e":"Dewi Sartika mendirikan Sakolah Isteri (sekolah untuk perempuan) di Bandung pada 1904."},
+  {"c":"Sejarah Indonesia","q":"Tokoh yang dianggap pelopor dan salah satu pendiri Budi Utomo adalah ...","o":["Dr. Soetomo bersama dr. Wahidin Sudirohusodo","Soekarno dan Hatta","Gajah Mada dan Hayam Wuruk","Douwes Dekker dan Cipto Mangunkusumo"],"a":0,"e":"Budi Utomo (20 Mei 1908) digagas dr. Wahidin Sudirohusodo dan didirikan dr. Soetomo bersama pelajar STOVIA."},
+  {"c":"Sejarah Indonesia","q":"Lagu Indonesia Raya diperdengarkan pertama kali pada Sumpah Pemuda 1928 oleh penggubahnya, yaitu ...","o":["Wage Rudolf Supratman","Ismail Marzuki","Cornel Simanjuntak","Koesbini"],"a":0,"e":"W.R. Supratman menciptakan Indonesia Raya dan memperdengarkannya pada Kongres Pemuda II, 28 Oktober 1928."},
+  {"c":"Sejarah Indonesia","q":"Proklamasi kemerdekaan Indonesia dibacakan pada ...","o":["17 Agustus 1945","17 Agustus 1950","1 Juni 1945","28 Oktober 1928"],"a":0,"e":"Proklamasi kemerdekaan Indonesia dibacakan oleh Soekarno pada 17 Agustus 1945."},
+  {"c":"Sejarah Indonesia","q":"Candi Borobudur dibangun oleh wangsa ...","o":["Syailendra","Majapahit","Sriwijaya","Mataram Islam"],"a":0,"e":"Candi Borobudur dibangun pada masa wangsa Syailendra."},
+  {"c":"Sejarah Indonesia","q":"Sumpah Pemuda diikrarkan pada tahun ...","o":["1928","1908","1945","1966"],"a":0,"e":"Sumpah Pemuda diikrarkan pada 28 Oktober 1928 dalam Kongres Pemuda II."},
+  {"c":"Sejarah Indonesia","q":"Patih Majapahit yang terkenal dengan Sumpah Palapa adalah ...","o":["Gajah Mada","Hayam Wuruk","Raden Wijaya","Airlangga"],"a":0,"e":"Gajah Mada mengucapkan Sumpah Palapa untuk mempersatukan Nusantara."},
+  {"c":"Sejarah Indonesia","q":"BPUPKI adalah singkatan dari ...","o":["Badan Penyelidik Usaha-usaha Persiapan Kemerdekaan Indonesia","Badan Pembantu Usaha Persiapan Kemerdekaan Indonesia","Badan Pengawas Persiapan Kemerdekaan Indonesia","Badan Penyelenggara Pemerintahan Kemerdekaan Indonesia"],"a":0,"e":"BPUPKI dibentuk untuk menyelidiki dan mempersiapkan hal-hal penting bagi kemerdekaan Indonesia."},
+  {"c":"Sejarah Indonesia","q":"Ketua PPKI adalah ...","o":["Ir. Soekarno","Mohammad Hatta","Sutan Sjahrir","Ahmad Soebardjo"],"a":0,"e":"PPKI diketuai oleh Ir. Soekarno dengan Mohammad Hatta sebagai wakil."},
+  {"c":"Sejarah Indonesia","q":"Naskah Proklamasi disusun di rumah ...","o":["Laksamana Maeda","Soekarno","Mohammad Hatta","Ahmad Soebardjo"],"a":0,"e":"Perumusan naskah Proklamasi dilakukan di rumah Laksamana Maeda di Jalan Imam Bonjol."},
+  {"c":"Sejarah Indonesia","q":"Pembacaan teks Proklamasi dilakukan di ...","o":["Jalan Pegangsaan Timur No. 56","Jalan Imam Bonjol No. 1","Istana Merdeka","Lapangan Ikada"],"a":0,"e":"Proklamasi dibacakan di kediaman Soekarno, Jalan Pegangsaan Timur No. 56, Jakarta."},
+  {"c":"Sejarah Indonesia","q":"Peristiwa Rengasdengklok terjadi pada ...","o":["16 Agustus 1945","17 Agustus 1945","15 Agustus 1945","18 Agustus 1945"],"a":0,"e":"Soekarno dan Hatta dibawa ke Rengasdengklok pada 16 Agustus 1945 untuk mendesak proklamasi."},
+  {"c":"Sejarah Indonesia","q":"Pahlawan nasional dari Aceh yang memimpin perlawanan terhadap Belanda adalah ...","o":["Cut Nyak Dhien","R.A. Kartini","Dewi Sartika","Christina Martha Tiahahu"],"a":0,"e":"Cut Nyak Dhien adalah pahlawan dari Aceh yang gigih melawan Belanda."},
+  {"c":"Sejarah Indonesia","q":"Perang Diponegoro berlangsung pada tahun ...","o":["1825-1830","1808-1811","1905-1908","1945-1949"],"a":0,"e":"Perang Diponegoro berlangsung pada 1825 sampai 1830."},
+  {"c":"Sejarah Indonesia","q":"Sultan Hasanuddin adalah raja dari Kerajaan ...","o":["Gowa","Aceh","Ternate","Mataram"],"a":0,"e":"Sultan Hasanuddin memimpin Kerajaan Gowa di Sulawesi Selatan."},
+  {"c":"Sejarah Indonesia","q":"VOC didirikan pada tahun ...","o":["1602","1596","1619","1641"],"a":0,"e":"Vereenigde Oostindische Compagnie atau VOC didirikan pada 1602."},
+  {"c":"Sejarah Indonesia","q":"Pusat Kerajaan Sriwijaya diperkirakan berada di ...","o":["Palembang","Yogyakarta","Malang","Bandung"],"a":0,"e":"Sriwijaya merupakan kerajaan maritim yang berpusat di sekitar Palembang."},
+  {"c":"Sejarah Indonesia","q":"Kerajaan Majapahit didirikan oleh ...","o":["Raden Wijaya","Hayam Wuruk","Gajah Mada","Ken Arok"],"a":0,"e":"Raden Wijaya mendirikan Kerajaan Majapahit pada akhir abad ke-13."},
+  {"c":"Sejarah Indonesia","q":"Kitab Sutasoma yang memuat semboyan Bhinneka Tunggal Ika ditulis oleh ...","o":["Mpu Tantular","Mpu Prapanca","Mpu Sedah","Mpu Panuluh"],"a":0,"e":"Kitab Sutasoma karya Mpu Tantular memuat semboyan Bhinneka Tunggal Ika."},
+  {"c":"Sejarah Indonesia","q":"Candi Prambanan terletak di dekat kota ...","o":["Yogyakarta","Magelang","Kediri","Blitar"],"a":0,"e":"Candi Prambanan berada di perbatasan Klaten, Jawa Tengah, dan Daerah Istimewa Yogyakarta, sehingga dikenal sebagai candi di dekat Yogyakarta."},
+  {"c":"Sejarah Indonesia","q":"Pangeran Antasari adalah tokoh perlawanan dari Kesultanan ...","o":["Banjar","Aceh","Maluku","Bone"],"a":0,"e":"Pangeran Antasari memimpin perlawanan rakyat Banjar terhadap Belanda."},
+  {"c":"Sejarah Indonesia","q":"Kapitan Pattimura berasal dari ...","o":["Maluku","Jawa Barat","Sulawesi Selatan","Sumatra Barat"],"a":0,"e":"Pattimura atau Thomas Matulessy adalah pahlawan dari Maluku."},
+  {"c":"Sejarah Indonesia","q":"Tujuan Sumpah Palapa yang diucapkan Gajah Mada adalah ...","o":["Mempersatukan Nusantara","Menguasai Eropa","Membentuk ASEAN","Mengakhiri penjajahan Jepang"],"a":0,"e":"Gajah Mada bersumpah tidak akan beristirahat sebelum mempersatukan Nusantara."},
+  {"c":"Sejarah Indonesia","q":"Budi Utomo didirikan pada ...","o":["20 Mei 1908","28 Oktober 1928","17 Agustus 1945","1 Juni 1945"],"a":0,"e":"Budi Utomo didirikan pada 20 Mei 1908 dan menjadi awal pergerakan nasional."},
+  {"c":"Sejarah Indonesia","q":"Salah satu tokoh pendiri Indische Partij adalah ...","o":["Cipto Mangunkusumo","Soekarno","Mohammad Hatta","Sutan Sjahrir"],"a":0,"e":"Indische Partij didirikan oleh Tiga Serangkai, yaitu Douwes Dekker, Cipto Mangunkusumo, dan Suwardi Suryaningrat."},
+  {"c":"Sejarah Indonesia","q":"Kongres Pemuda II yang menghasilkan Sumpah Pemuda dilaksanakan pada ...","o":["28 Oktober 1928","20 Mei 1908","1 Juni 1945","17 Agustus 1945"],"a":0,"e":"Kongres Pemuda II berlangsung pada 28 Oktober 1928 di Jakarta."},
+  {"c":"Sejarah Indonesia","q":"Jepang menyerah kepada Sekutu pada ...","o":["15 Agustus 1945","17 Agustus 1945","14 Agustus 1945","2 September 1945"],"a":0,"e":"Jepang menyerah tanpa syarat kepada Sekutu pada 15 Agustus 1945."},
+  {"c":"Sejarah Indonesia","q":"Pertempuran Surabaya yang diperingati sebagai Hari Pahlawan terjadi pada ...","o":["10 November 1945","17 Agustus 1945","1 Oktober 1945","28 Oktober 1945"],"a":0,"e":"Pertempuran Surabaya terjadi pada 10 November 1945 dan diperingati sebagai Hari Pahlawan."},
+  {"c":"Sejarah Indonesia","q":"Peristiwa Bandung Lautan Api terjadi pada ...","o":["23 Maret 1946","10 November 1945","17 Agustus 1945","1 Juni 1946"],"a":0,"e":"Bandung Lautan Api terjadi pada 23 Maret 1946 sebagai bentuk perlawanan terhadap Sekutu."},
+  {"c":"Sejarah Indonesia","q":"Perjanjian Linggarjati disepakati pada tahun ...","o":["1947","1945","1949","1950"],"a":0,"e":"Perjanjian Linggarjati antara Indonesia dan Belanda disepakati pada 1947."},
+  {"c":"Sejarah Indonesia","q":"Konferensi Asia Afrika tahun 1955 diselenggarakan di ...","o":["Bandung","Jakarta","Surabaya","Yogyakarta"],"a":0,"e":"Konferensi Asia Afrika diselenggarakan di Bandung pada 18-24 April 1955."},
+  {"c":"Sejarah Indonesia","q":"Dekrit Presiden yang membubarkan Konstituante dikeluarkan pada ...","o":["5 Juli 1959","17 Agustus 1945","1 Juni 1945","28 Oktober 1928"],"a":0,"e":"Dekrit Presiden dikeluarkan pada 5 Juli 1959 dan memberlakukan kembali UUD 1945."},
+  {"c":"Sejarah Indonesia","q":"Reformasi yang mengakhiri pemerintahan Orde Baru terjadi pada tahun ...","o":["1998","1966","1975","2004"],"a":0,"e":"Reformasi tahun 1998 menandai berakhirnya pemerintahan Orde Baru."},
+  {"c":"Bahasa Indonesia","q":"Antonim kata \"rajin\" adalah ...","o":["malas","tekun","giat","ulet"],"a":0,"e":"Lawan kata atau antonim dari rajin adalah malas."},
+  {"c":"Bahasa Indonesia","q":"Antonim kata \"semangat\" adalah ...","o":["lesu","giat","tekun","ulet"],"a":0,"e":"Lawan kata semangat adalah lesu atau lemas."},
+  {"c":"Bahasa Indonesia","q":"Penulisan yang sesuai dengan kata baku adalah ...","o":["praktik","praktek","practise","practik"],"a":0,"e":"Menurut KBBI, bentuk baku adalah praktik; bentuk praktek tidak baku."},
+  {"c":"Bahasa Indonesia","q":"Paragraf yang ide pokoknya terletak di awal kalimat disebut paragraf ...","o":["deduktif","induktif","campuran","deskriptif"],"a":0,"e":"Paragraf deduktif diawali ide pokok, kemudian diikuti kalimat-kalimat penjelas."},
+  {"c":"Bahasa Indonesia","q":"Paragraf yang ide pokoknya terletak di akhir kalimat disebut paragraf ...","o":["induktif","deduktif","naratif","prosedural"],"a":0,"e":"Paragraf induktif menempatkan ide pokok di akhir setelah kalimat-kalimat penjelas."},
+  {"c":"Bahasa Indonesia","q":"Ungkapan \"ringan tangan\" berarti ...","o":["suka menolong","lelah bekerja","jago bermain bola","gemar berkata-kata"],"a":0,"e":"Ringan tangan menggambarkan orang yang suka menolong tanpa diminta."},
+  {"c":"Bahasa Indonesia","q":"Kalimat berikut yang penulisannya sudah baku adalah ...","o":["Keluarga itu mengalami musibah.","Keluarga itu mengalamin musibah.","Keluarga itu mengalami musibat.","Keluarga itu musibah mengalami."],"a":0,"e":"Kata kerja baku-nya mengalami dan pasangan yang tepat adalah musibah, bukan musibat, mengalamin, atau kalimat dengan urutan kata yang keliru."},
+  {"c":"Bahasa Indonesia","q":"Konjungsi \"karena\" menyatakan hubungan ...","o":["sebab","waktu","tujuan","syarat"],"a":0,"e":"Konjungsi karena menghubungkan dua klausa dengan hubungan sebab-akibat."},
+  {"c":"Bahasa Indonesia","q":"Teks berikut yang termasuk teks prosedur adalah ...","o":["Resep nasi goreng","Puisi tentang ibu","Berita tentang banjir","Dongeng Danau Toba"],"a":0,"e":"Teks prosedur berisi langkah-langkah mencapai tujuan, contohnya resep masakan."},
+  {"c":"Bahasa Indonesia","q":"Kata tanya untuk menanyakan tempat adalah ...","o":["di mana","siapa","kapan","mengapa"],"a":0,"e":"Kata tanya di mana digunakan untuk menanyakan tempat atau lokasi."},
+  {"c":"Bahasa Indonesia","q":"Arti kata \"melirik\" adalah ...","o":["memandang sekilas sambil menoleh","berjalan pelan-pelan","membajak sawah tetangga","menepuk punggung lembut"],"a":0,"e":"Melirik berarti memandang sekilas sambil menoleh, biasanya dengan maksud tertentu."},
+  {"c":"Bahasa Indonesia","q":"Kalimat dengan penulisan huruf kapital yang benar adalah ...","o":["Kami pergi ke Bandung hari Senin.","kami pergi ke bandung hari senin.","Kami pergi ke bandung Hari senin.","Kami Pergi ke Bandung hari Senin."],"a":0,"e":"Nama kota dan nama hari ditulis dengan huruf kapital, sedangkan kata lain mengikuti aturan."},
+  {"c":"Bahasa Indonesia","q":"Sinonim kata \"pandai\" adalah ...","o":["cerdas","bodoh","lambat","malas"],"a":0,"e":"Sinonim atau persamaan kata pandai adalah cerdas."},
+  {"c":"Bahasa Indonesia","q":"Kata baku yang benar adalah ...","o":["apotek","apotik","apoteek","apothek"],"a":0,"e":"Bentuk baku menurut KBBI adalah apotek."},
+  {"c":"Bahasa Indonesia","q":"Gagasan utama dalam sebuah paragraf disebut ...","o":["ide pokok","judul","kesimpulan","latar"],"a":0,"e":"Ide pokok adalah gagasan utama yang menjadi inti sebuah paragraf."},
+  {"c":"Bahasa Indonesia","q":"Imbuhan pada kata \"menulis\" adalah ...","o":["me-","di-","ter-","-kan"],"a":0,"e":"Kata menulis terbentuk dari imbuhan me- dan kata dasar tulis."},
+  {"c":"Bahasa Indonesia","q":"Kalimat yang menggunakan kata kerja dengan tepat adalah ...","o":["Para siswa berbaris di lapangan.","Para siswa baris di lapangan.","Para siswa berbarisan di lapangan.","Para siswa barisan di lapangan."],"a":0,"e":"Kata berbaris merupakan kata kerja yang tepat untuk menyatakan kegiatan para siswa."},
+  {"c":"Bahasa Indonesia","q":"Kalimat yang paling efektif adalah ...","o":["Kami bertemu di sekolah.","Kami saling bertemu satu sama lain di sekolah.","Kami saling bertemu di sekolah.","Kami bertemu di sekolah di mana tempat itu."],"a":0,"e":"Kalimat efektif tidak mengandung kata mubazir. Kata saling dan bertemu sudah mengandung makna timbal balik."},
+  {"c":"Bahasa Indonesia","q":"Kalimat yang mengandung majas personifikasi adalah ...","o":["Angin berbisik di telingaku.","Wajahnya seperti bulan.","Dia cepat seperti kilat.","Bunga itu sangat cantik."],"a":0,"e":"Personifikasi memberikan sifat manusia kepada benda, seperti angin yang berbisik."},
+  {"c":"Bahasa Indonesia","q":"Objek pada kalimat \"Ani membaca buku\" adalah ...","o":["buku","Ani","membaca","kalimat"],"a":0,"e":"Objek adalah bagian kalimat yang dikenai tindakan. Kata buku menjadi objek dari membaca."},
+  {"c":"Bahasa Indonesia","q":"Subjek pada kalimat \"Ayahku bekerja di kantor\" adalah ...","o":["Ayahku","bekerja","di kantor","kantor"],"a":0,"e":"Subjek adalah pelaku atau pokok kalimat, yaitu Ayahku."},
+  {"c":"Bahasa Indonesia","q":"Makna kata ulang \"sayur-mayur\" adalah ...","o":["berbagai jenis sayur","satu sayur","sayur busuk","alat memasak"],"a":0,"e":"Kata ulang sayur-mayur menunjukkan banyak atau berbagai jenis sayur."},
+  {"c":"Bahasa Indonesia","q":"Pantun memiliki pola sajak ...","o":["a-b-a-b","a-a-a-a","a-b-b-a","a-b-c-d"],"a":0,"e":"Pantun bersajak a-b-a-b, yaitu baris pertama dan ketiga serta baris kedua dan keempat."},
+  {"c":"Bahasa Indonesia","q":"Puisi lama yang terdiri atas sampiran dan isi adalah ...","o":["pantun","puisi baru","cerpen","drama"],"a":0,"e":"Pantun terdiri atas empat baris, dua baris sampiran dan dua baris isi."},
+  {"c":"Bahasa Indonesia","q":"Teks yang menggambarkan suatu objek secara rinci disebut teks ...","o":["deskripsi","narasi","prosedur","persuasi"],"a":0,"e":"Teks deskripsi bertujuan menggambarkan objek dengan detail agar pembaca membayangkan."},
+  {"c":"Bahasa Indonesia","q":"Teks yang berisi langkah-langkah melakukan sesuatu disebut teks ...","o":["prosedur","deskripsi","narasi","berita"],"a":0,"e":"Teks prosedur berisi petunjuk atau langkah-langkah yang harus diikuti."},
+  {"c":"Bahasa Indonesia","q":"Kalimat majemuk setara ditunjukkan oleh ...","o":["Saya membaca buku dan adik menonton TV.","Saya membaca buku karena besok ujian.","Jika hujan, kami tidak pergi.","Saya tahu bahwa dia sakit."],"a":0,"e":"Kalimat majemuk setara menggabungkan dua klausa yang setara dengan konjungsi dan."},
+  {"c":"Bahasa Indonesia","q":"Konjungsi \"tetapi\" menyatakan hubungan ...","o":["pertentangan","sebab","akibat","tujuan"],"a":0,"e":"Konjungsi tetapi menghubungkan dua hal yang bertentangan."},
+  {"c":"Bahasa Indonesia","q":"Penulisan kata depan \"di\" yang benar terdapat pada ...","o":["di rumah","dimakan","ditulis","dibaca"],"a":0,"e":"Kata depan di ditulis terpisah dari kata yang mengikutinya, seperti di rumah."},
+  {"c":"Bahasa Indonesia","q":"Kata berikut yang merupakan kata serapan adalah ...","o":["teknologi","pohon","rumah","makan"],"a":0,"e":"Teknologi merupakan kata serapan dari bahasa asing yang telah disesuaikan ejaannya."},
+  {"c":"Bahasa Indonesia","q":"Penulisan tanggal yang benar adalah ...","o":["17 Agustus 1945","17 agustus 1945","17 Agustus, 1945","17-08-1945"],"a":0,"e":"Nama bulan ditulis dengan huruf kapital dan tidak perlu tanda koma setelah bulan."},
+  {"c":"Bahasa Indonesia","q":"Kalimat tanya yang benar adalah ...","o":["Siapa yang membawa buku itu?","Siapa yang membawa buku itu.","Siapa yang membawa buku itu!","Siapa yang membawa buku itu"],"a":0,"e":"Kalimat tanya diakhiri dengan tanda tanya."},
+  {"c":"Bahasa Indonesia","q":"Ungkapan \"kambing hitam\" berarti ...","o":["orang yang disalahkan","orang yang berjasa","hewan ternak","orang kaya"],"a":0,"e":"Kambing hitam adalah ungkapan untuk orang yang dijadikan tumpuan kesalahan."},
+  {"c":"Bahasa Indonesia","q":"Peribahasa \"Besar pasak daripada tiang\" berarti ...","o":["pengeluaran lebih besar daripada pendapatan","rumah besar","tiang yang kuat","hidup hemat"],"a":0,"e":"Peribahasa ini mengibaratkan pengeluaran yang melebihi kemampuan atau pendapatan."},
+  {"c":"Bahasa Indonesia","q":"Unsur utama teks berita adalah ...","o":["5W+1H","3W+2H","4P","5S"],"a":0,"e":"Teks berita memuat unsur what, who, when, where, why, dan how atau 5W+1H."},
+  {"c":"Bahasa Indonesia","q":"Kalimat langsung ditunjukkan oleh ...","o":["Ibu berkata, \"Belajarlah dengan rajin.\"","Ibu berkata bahwa saya harus belajar.","Ibu menyuruh saya belajar.","Ibu berkata agar saya belajar."],"a":0,"e":"Kalimat langsung menggunakan tanda petik untuk menuliskan ucapan secara persis."},
+  {"c":"Bahasa Indonesia","q":"Kata berikut yang termasuk kata kerja mental adalah ...","o":["memahami","berlari","menulis","makan"],"a":0,"e":"Kata kerja mental berkaitan dengan proses berpikir atau perasaan, seperti memahami."},
+  {"c":"Bahasa Indonesia","q":"Kalimat yang tidak efektif karena pleonasme adalah ...","o":["Dia naik ke atas.","Dia naik.","Dia pergi.","Dia duduk."],"a":0,"e":"Kata naik sudah berarti bergerak ke atas, sehingga ke atas menjadi mubazir."},
+  {"c":"Bahasa Indonesia","q":"Unsur intrinsik cerpen adalah ...","o":["tema","sampul","harga buku","nama penerbit"],"a":0,"e":"Tema merupakan salah satu unsur intrinsik atau unsur di dalam karya sastra."},
+  {"c":"Bahasa Indonesia","q":"Pesan moral yang ingin disampaikan pengarang dalam cerita disebut ...","o":["amanat","tokoh","latar","alur"],"a":0,"e":"Amanat adalah pesan moral atau pelajaran yang dapat diambil dari cerita."},
+  {"c":"Bahasa Inggris","q":"She ___ to school every day.","o":["goes","go","going","gone"],"a":0,"e":"Untuk subjek She dan kebiasaan sehari-hari, gunakan bentuk goes."},
+  {"c":"Bahasa Inggris","q":"What is the opposite of \"hot\"?","o":["cold","warm","big","fast"],"a":0,"e":"Opposite atau lawan kata hot adalah cold."},
+  {"c":"Bahasa Inggris","q":"\"Kucing\" in English is ...","o":["cat","dog","cow","rat"],"a":0,"e":"Kucing dalam bahasa Inggris disebut cat."},
+  {"c":"Bahasa Inggris","q":"I ___ a student.","o":["am","is","are","be"],"a":0,"e":"Subjek I menggunakan to be am."},
+  {"c":"Bahasa Inggris","q":"The plural of \"child\" is ...","o":["children","childs","childes","childrens"],"a":0,"e":"Bentuk jamak tidak beraturan dari child adalah children."},
+  {"c":"Bahasa Inggris","q":"Which day comes after Monday?","o":["Tuesday","Sunday","Friday","Wednesday"],"a":0,"e":"Hari setelah Monday adalah Tuesday."},
+  {"c":"Bahasa Inggris","q":"The past tense of \"go\" is ...","o":["went","go","gone","going"],"a":0,"e":"Bentuk past tense dari go adalah went."},
+  {"c":"Bahasa Inggris","q":"I have lived here ___ 2010.","o":["since","for","from","at"],"a":0,"e":"Since digunakan untuk titik waktu tertentu, sedangkan for untuk durasi."},
+  {"c":"Bahasa Inggris","q":"She is good ___ math.","o":["at","in","on","for"],"a":0,"e":"Kata yang tepat untuk menyatakan kemampuan adalah good at."},
+  {"c":"Bahasa Inggris","q":"There ___ some milk in the fridge.","o":["is","are","be","were"],"a":0,"e":"Milk adalah uncountable noun, sehingga menggunakan is."},
+  {"c":"Bahasa Inggris","q":"He ___ TV when I called.","o":["was watching","watches","watch","is watching"],"a":0,"e":"Kejadian yang sedang berlangsung di masa lalu menggunakan past continuous was watching."},
+  {"c":"Bahasa Inggris","q":"The synonym of \"happy\" is ...","o":["glad","sad","angry","tired"],"a":0,"e":"Glad memiliki makna yang sama dengan happy, yaitu senang."},
+  {"c":"Bahasa Inggris","q":"The antonym of \"difficult\" is ...","o":["easy","hard","strong","heavy"],"a":0,"e":"Lawan kata difficult adalah easy."},
+  {"c":"Bahasa Inggris","q":"I put the book ___ the table.","o":["on","in","at","under"],"a":0,"e":"Kata on digunakan untuk menunjukkan posisi di atas permukaan."},
+  {"c":"Bahasa Inggris","q":"I ___ my homework yesterday.","o":["did","do","does","doing"],"a":0,"e":"Karena yesterday menunjukkan masa lalu, gunakan did."},
+  {"c":"Bahasa Inggris","q":"If it rains, we ___ at home.","o":["will stay","stayed","staying","stays"],"a":0,"e":"Kalimat pengandaian tipe pertama menggunakan will + verb untuk hasil."},
+  {"c":"Bahasa Inggris","q":"She asked me where I ___.","o":["lived","live","living","lives"],"a":0,"e":"Dalam reported speech, tenses bergeser ke bentuk lampau sehingga live menjadi lived."},
+  {"c":"Bahasa Inggris","q":"This is the ___ book I have ever read.","o":["best","better","good","well"],"a":0,"e":"Superlative untuk good adalah best."},
+  {"c":"Bahasa Inggris","q":"The room ___ cleaned every day.","o":["is","are","do","has"],"a":0,"e":"Kalimat pasif dengan subjek tunggal menggunakan is + past participle."},
+  {"c":"Bahasa Inggris","q":"Would you like ___ tea?","o":["some","any","many","a"],"a":0,"e":"Some digunakan dalam tawaran atau permintaan yang sopan."},
+  {"c":"Bahasa Inggris","q":"He is taller ___ his brother.","o":["than","then","as","from"],"a":0,"e":"Than digunakan untuk membandingkan dua hal."},
+  {"c":"Bahasa Inggris","q":"I look forward to ___ you.","o":["seeing","see","saw","seen"],"a":0,"e":"Setelah look forward to, gunakan bentuk -ing."},
+  {"c":"Bahasa Inggris","q":"Neither Rina nor her friends ___ coming.","o":["are","is","was","be"],"a":0,"e":"Dalam neither ... nor, kata kerja mengikuti subjek terdekat, yaitu friends, sehingga are."},
+  {"c":"Bahasa Inggris","q":"The opposite of \"buy\" is ...","o":["sell","pay","spend","borrow"],"a":0,"e":"Lawan kata buy atau membeli adalah sell atau menjual."},
+  {"c":"Bahasa Inggris","q":"How ___ money do you have?","o":["much","many","few","lot"],"a":0,"e":"Money adalah uncountable noun, sehingga menggunakan much."},
+  {"c":"Bahasa Inggris","q":"The teacher told us ___ quiet.","o":["to be","be","being","was"],"a":0,"e":"Setelah tell someone, gunakan to + verb."},
+  {"c":"Bahasa Inggris","q":"She has been studying English ___ two years.","o":["for","since","in","at"],"a":0,"e":"For digunakan untuk durasi, seperti two years."},
+  {"c":"Bahasa Inggris","q":"A person who writes books is a ...","o":["writer","reader","teacher","painter"],"a":0,"e":"Orang yang menulis buku disebut writer."},
+  {"c":"Bahasa Inggris","q":"The synonym of \"begin\" is ...","o":["start","end","stop","finish"],"a":0,"e":"Start memiliki makna yang sama dengan begin, yaitu memulai."},
+  {"c":"Bahasa Inggris","q":"The past tense of \"eat\" is ...","o":["ate","eated","eaten","eats"],"a":0,"e":"Bentuk past tense tidak beraturan dari eat adalah ate; eaten dipakai pada perfect tense."},
+  {"c":"Bahasa Inggris","q":"The comparative form of \"good\" is ...","o":["better","best","gooder","more good"],"a":0,"e":"Comparative dari good adalah better, sedangkan best adalah superlative."},
+  {"c":"Bahasa Inggris","q":"The opposite of \"expensive\" is ...","o":["cheap","dear","pricey","costly"],"a":0,"e":"Lawan kata expensive (mahal) adalah cheap (murah)."},
+  {"c":"Bahasa Inggris","q":"A person who cooks food in a restaurant is a ...","o":["chef","waiter","farmer","singer"],"a":0,"e":"Chef adalah juru masak, orang yang memasak makanan di dapur."},
+  {"c":"Bahasa Inggris","q":"I am interested ___ music.","o":["in","at","on","to"],"a":0,"e":"'Interested in' adalah pasangan kata yang baku untuk menunjukkan minat."},
+  {"c":"Bahasa Inggris","q":"Please listen ___ the teacher.","o":["to","at","for","with"],"a":0,"e":"'Listen to' digunakan sebelum objek yang didengarkan."},
+  {"c":"Bahasa Inggris","q":"My father is a doctor. He ___ his patients every day.","o":["helps","help","helping","helped"],"a":0,"e":"Subjek He pada kebiasaan sehari-hari (present simple) memerlukan bentuk helps."},
+  {"c":"Bahasa Inggris","q":"There are many ___ in the library.","o":["books","book","bookss","book's"],"a":0,"e":"Kata many diikuti kata benda jamak, sehingga bentuk yang tepat adalah books."},
+  {"c":"Bahasa Inggris","q":"\"Turn on the light, please.\" The underlined words mean ...","o":["Nyalakan lampu","Matikan lampu","Rapikan lampu","Beli lampu"],"a":0,"e":"Turn on berarti menyalakan; lawannya turn off berarti mematikan."},
+  {"c":"Bahasa Inggris","q":"The antonym of \"always\" is ...","o":["never","usually","often","sometimes"],"a":0,"e":"Lawan kata always (selalu) adalah never (tidak pernah)."},
+  {"c":"Bahasa Inggris","q":"We ___ to the beach last Sunday.","o":["went","go","goes","going"],"a":0,"e":"Last Sunday menunjukkan masa lalu, sehingga gunakan went."},
+  {"c":"Pengetahuan Umum","q":"Rumus kimia air adalah ...","o":["H₂O","CO₂","O₂","NaCl"],"a":0,"e":"Air tersusun dari dua atom hidrogen dan satu atom oksigen, sehingga rumusnya H₂O."},
+  {"c":"Pengetahuan Umum","q":"Planet terbesar dalam tata surya adalah ...","o":["Jupiter","Saturnus","Neptunus","Bumi"],"a":0,"e":"Jupiter merupakan planet terbesar di tata surya, jauh lebih besar daripada Bumi."},
+  {"c":"Pengetahuan Umum","q":"Satelit alami yang mengorbit Bumi adalah ...","o":["Bulan","Mars","Venus","Merkurius"],"a":0,"e":"Bulan adalah satu-satunya satelit alami Bumi."},
+  {"c":"Pengetahuan Umum","q":"Bagian mata yang mengatur banyaknya cahaya yang masuk adalah ...","o":["iris","kornea","lensa","retina"],"a":0,"e":"Iris bekerja seperti diafragma kamera; pupil di tengahnya membesar atau mengecil sesuai banyaknya cahaya."},
+  {"c":"Pengetahuan Umum","q":"Proses perubahan wujud gas menjadi cair disebut ...","o":["kondensasi","evaporasi","sublimasi","kristalisasi"],"a":0,"e":"Kondensasi terjadi ketika uap air kehilangan kalor dan menjadi cair, misalnya embun pada kaca mobil."},
+  {"c":"Pengetahuan Umum","q":"Satuan gaya dalam Sistem Internasional (SI) adalah ...","o":["newton","joule","watt","ampere"],"a":0,"e":"Gaya diukur dalam newton (N), diambil dari nama ilmuwan Isaac Newton."},
+  {"c":"Pengetahuan Umum","q":"Tumbuhan menyerap gas ... untuk melakukan fotosintesis.","o":["karbon dioksida","oksigen","nitrogen","helium"],"a":0,"e":"Fotosintesis memerlukan karbon dioksida, air, dan cahaya matahari, lalu menghasilkan oksigen."},
+  {"c":"Pengetahuan Umum","q":"Satuan penyimpanan data yang lebih besar daripada gigabyte adalah ...","o":["terabyte","megabyte","kilobyte","byte"],"a":0,"e":"Urutan satuan dari kecil ke besar: byte, KB, MB, GB, TB. 1 TB = 1.024 GB."},
+  {"c":"Pengetahuan Umum","q":"Perangkat lunak pada komputer disebut juga ...","o":["software","hardware","brainware","mainboard"],"a":0,"e":"Software adalah perangkat lunak; hardware perangkat keras, dan brainware adalah penggunanya."},
+  {"c":"Pengetahuan Umum","q":"Ilmuwan yang merumuskan hukum gravitasi setelah mengamati buah yang jatuh adalah ...","o":["Isaac Newton","Albert Einstein","Galileo Galilei","Nikola Tesla"],"a":0,"e":"Isaac Newton merumuskan hukum gravitasi universal pada abad ke-17."},
+  {"c":"Pengetahuan Umum","q":"Alat yang digunakan untuk mengukur suhu tubuh disebut ...","o":["termometer","barometer","altimeter","seismograf"],"a":0,"e":"Termometer mengukur suhu; barometer mengukur tekanan udara, altimeter mengukur ketinggian, dan seismograf mencatat getaran gempa."},
+  {"c":"Pengetahuan Umum","q":"Sungai yang dikenal sebagai sungai terpanjang di dunia adalah ...","o":["Sungai Nil","Sungai Amazon","Sungai Yangtze","Sungai Kapuas"],"a":0,"e":"Sungai Nil di Afrika memiliki panjang sekitar 6.650 km dan lazim disebut sungai terpanjang di dunia."},
+  {"c":"Pengetahuan Umum","q":"Samudra terluas dan terdalam di dunia adalah ...","o":["Samudra Pasifik","Samudra Atlantik","Samudra Hindia","Samudra Arktik"],"a":0,"e":"Samudra Pasifik adalah lautan terluas dan terdalam di Bumi."},
+  {"c":"Pengetahuan Umum","q":"Puncak tertinggi di dunia adalah ...","o":["Gunung Everest","Gunung Kilimanjaro","Gunung Elbrus","Puncak Jaya"],"a":0,"e":"Gunung Everest di perbatasan Nepal-Tibet setinggi sekitar 8.848 m. Puncak Jaya adalah yang tertinggi di Indonesia."},
+  {"c":"Pengetahuan Umum","q":"Ibu kota negara Jepang adalah ...","o":["Tokyo","Osaka","Kyoto","Seoul"],"a":0,"e":"Tokyo adalah ibu kota Jepang; Seoul merupakan ibu kota Korea Selatan."},
+  {"c":"Pengetahuan Umum","q":"Menara Eiffel, ikon yang dibangun pada 1889, terletak di kota ...","o":["Paris","London","Roma","Berlin"],"a":0,"e":"Menara Eiffel dibangun di Paris, Prancis, sebagai ikon pameran dunia 1889."},
+  {"c":"Pengetahuan Umum","q":"Indonesia memiliki ... zona waktu.","o":["Tiga (WIB, WITA, dan WIT)","Dua (WIB dan WITA)","Empat waktu internasional","Satu (WIB saja)"],"a":0,"e":"Zona waktu Indonesia: WIB (GMT+7), WITA (GMT+8), dan WIT (GMT+9)."},
+  {"c":"Pengetahuan Umum","q":"Gurun pasir terluas di dunia adalah ...","o":["Gurun Sahara","Gurun Gobi","Gurun Kalahari","Gurun Namib"],"a":0,"e":"Gurun Sahara di Afrika Utara adalah gurun pasir terluas, sekitar 9,2 juta km persegi."},
+  {"c":"Pengetahuan Umum","q":"Negara yang ibu kotanya Bangkok adalah ...","o":["Thailand","Vietnam","Myanmar","Filipina"],"a":0,"e":"Bangkok adalah ibu kota Thailand."},
+  {"c":"Pengetahuan Umum","q":"Selat yang memisahkan Sumatra dengan Semenanjung Malaya (Malaysia) adalah ...","o":["Selat Malaka","Selat Sunda","Selat Lombok","Selat Makassar"],"a":0,"e":"Selat Malaka memisahkan Sumatra dan Semenanjung Malaya serta merupakan jalur pelayaran penting dunia."},
+  {"c":"Pengetahuan Umum","q":"Sampah yang mudah membusuk secara alami, seperti sisa makanan dan daun, disebut sampah ...","o":["organik","anorganik","plastik","kimia"],"a":0,"e":"Sampah organik berasal dari makhluk hidup sehingga mudah didekomposisi; sampah plastik sulit terurai."},
+  {"c":"Pengetahuan Umum","q":"Gas rumah kaca yang paling banyak dilepaskan kendaraan bermotor adalah ...","o":["karbon dioksida (CO₂)","oksigen (O₂)","nitrogen (N₂)","helium (He)"],"a":0,"e":"Pembakaran bahan bakar fosil melepaskan CO₂ yang memerangkap panas di atmosfer."},
+  {"c":"Pengetahuan Umum","q":"Program 3R dalam pengelolaan sampah terdiri atas reduce, reuse, dan ...","o":["recycle","rebuild","replace","reward"],"a":0,"e":"3R meliputi reduce (mengurangi), reuse (menggunakan kembali), dan recycle (mendaur ulang)."},
+  {"c":"Pengetahuan Umum","q":"Salah satu penyebab utama banjir di kota besar adalah ...","o":["Membuang sampah ke saluran air","Menanam pohon di tepi jalan","Membuat sumur resapan","Membangun taman kota"],"a":0,"e":"Sampah yang menyumbat saluran air membuat aliran air hujan terhambat sehingga banjir mudah terjadi."},
+  {"c":"Pengetahuan Umum","q":"Energi yang tidak akan habis, seperti energi matahari dan angin, disebut ...","o":["energi terbarukan","energi fosil","energi nuklir","energi kimia"],"a":0,"e":"Energi terbarukan diperbarui secara alami, misalnya surya, angin, air, dan panas bumi."},
+  {"c":"Pengetahuan Umum","q":"Kenaikan suhu rata-rata bumi secara bertahap karena gas rumah kaca dikenal sebagai ...","o":["pemanasan global","gerhana bulan","badai tropis","gerhana matahari"],"a":0,"e":"Pemanasan global terjadi karena peningkatan gas rumah kaca yang memerangkap panas di atmosfer."},
+  {"c":"Pengetahuan Umum","q":"Tindakan yang paling membantu mengurangi pencemaran udara adalah ...","o":["Menggunakan transportasi umum","Membakar sampah di halaman rumah","Mengidupkan mesin motor saat berhenti lama","Mengganti hutan menjadi parkir besar"],"a":0,"e":"Transportasi umum mengurangi jumlah kendaraan sehingga jumlah emisi udara turun."},
+  {"c":"Pengetahuan Umum","q":"Tari Kecak yang ditampilkan pemuda duduk melingkar berasal dari ...","o":["Bali","Jawa Timur","Sumatra Barat","Papua"],"a":0,"e":"Tari Kecak berasal dari Bali dan mengangkat kisah Ramayana."},
+  {"c":"Pengetahuan Umum","q":"Angklung, alat musik bambu yang dimainkan dengan digoyang, berasal dari ...","o":["Jawa Barat","Jawa Tengah","Kalimantan Barat","Maluku"],"a":0,"e":"Angklung adalah alat musik tradisional masyarakat Sunda, Jawa Barat, dan diakui UNESCO pada 2010."},
+  {"c":"Pengetahuan Umum","q":"Rumah Gadang dengan atap bergonjong adalah rumah adat ...","o":["Sumatra Barat","Jawa Timur","Sulawesi Selatan","Kalimantan Timur"],"a":0,"e":"Rumah Gadang adalah rumah adat masyarakat Minangkabau di Sumatra Barat."},
+  {"c":"Pengetahuan Umum","q":"Tari Saman yang dimainkan berjajar dengan gerakan cepat dan kompak berasal dari ...","o":["Aceh","Papua","Bali","Nusa Tenggara Barat"],"a":0,"e":"Tari Saman berasal dari masyarakat Gayo, Aceh."},
+  {"c":"Pengetahuan Umum","q":"Warisan budaya Indonesia yang diakui UNESCO pada 2 Oktober 2009 adalah ...","o":["Batik","Wayang","Angklung","Keris"],"a":0,"e":"Batik ditetapkan UNESCO sebagai Warisan Kemanusiaan pada 2 Oktober 2009; tanggal itu kini dirayakan sebagai Hari Batik Nasional."},
+  {"c":"Pengetahuan Umum","q":"Candi Borobudur, candi Buddha terbesar di dunia, terletak di ...","o":["Magelang, Jawa Tengah","Blitar, Jawa Timur","Bukittinggi, Sumatra Barat","Singaraja, Bali"],"a":0,"e":"Candi Borobudur berada di Magelang, Jawa Tengah, dan dibangun pada masa wangsa Syailendra."},
+  {"c":"Pengetahuan Umum","q":"Sila ketiga Pancasila berbunyi ...","o":["Persatuan Indonesia","Kemanusiaan yang adil dan beradab","Ketuhanan Yang Maha Esa","Keadilan sosial bagi seluruh rakyat Indonesia"],"a":0,"e":"Sila ketiga adalah Persatuan Indonesia, yang lambangnya pohon beringin."},
+  {"c":"Pengetahuan Umum","q":"Salah satu bentuk partisipasi warga negara dalam pemilihan umum adalah ...","o":["Menggunakan hak pilih di TPS","Menjual hak pilih","Menghalangi tetangga pergi memilih","Membuat keributan di TPS"],"a":0,"e":"Warga memenuhi hak politiknya dengan memilih secara langsung, bebas, rahasia, dan bertanggung jawab."},
+  {"c":"Pengetahuan Umum","q":"Sikap yang mencerminkan toleransi antarumat beragama adalah ...","o":["Menghormati tetangga yang sedang beribadah","Melarang orang lain beribadah","Memaksakan agama sendiri kepada tetangga","Mengganggu acara keagamaan tetangga"],"a":0,"e":"Toleransi berarti menghargai ibadah dan keyakinan orang lain tanpa memaksakan keyakinan sendiri."},
+  {"c":"Pengetahuan Umum","q":"Contoh tanggung jawab warga negara terhadap negara adalah ...","o":["Membayar pajak dengan jujur","Menghindari membayar pajak","Menggelapkan bansos","Mengabaikan kewajiban yang ada"],"a":0,"e":"Pajak yang dibayarkan dengan jujur digunakan negara untuk membangun fasilitas publik bagi seluruh rakyat."},
+  {"c":"Pengetahuan Umum","q":"Nomor telepon darurat umum nasional Indonesia adalah ...","o":["112","110","119","911"],"a":0,"e":"112 adalah nomor darurat nasional; selain itu 110 untuk polisi, 113 untuk pemadam kebakaran, dan 119 untuk ambulans."},
+  {"c":"Pengetahuan Umum","q":"Dokumen identitas resmi yang wajib dimiliki warga negara Indonesia sejak usia 17 tahun adalah ...","o":["KTP (Kartu Tanda Penduduk)","SIM motor","Kartu pelajar","Kartu anggota organisasi"],"a":0,"e":"Sesuai undang-undang, setiap warga negara yang berusia 17 tahun wajib memiliki KTP elektronik."},
+  {"c":"Pengetahuan Umum","q":"Manfaat utama menabung di bank adalah ...","o":["Uang tersimpan aman dan bisa memperoleh bunga","Uang langsung bertambah banyak tanpa batas","Pajak warga otomatis lunas","Uang tidak dapat diambil lagi oleh siapa pun"],"a":0,"e":"Menyimpan uang di bank membuat dana lebih aman dan pemiliknya memperoleh jasa bunga sesuai ketentuan."},
+  {"c":"Pengetahuan Umum","q":"Ilmuwan yang merumuskan teori relativitas pada awal abad ke-20 adalah ...","o":["Albert Einstein","Isaac Newton","Thomas Edison","Alexander Graham Bell"],"a":0,"e":"Teori relativitas dirumuskan oleh Albert Einstein dan mengubah pemahaman tentang ruang, waktu, dan energi."},
+  {"c":"Pengetahuan Umum","q":"Tokoh yang mengembangkan lampu pijar secara praktis pada 1879 adalah ...","o":["Thomas Alva Edison","Nikola Tesla","Benjamin Franklin","James Watt"],"a":0,"e":"Thomas Alva Edison mengembangkan lampu pijar praktis sehingga pencahayaan listrik dapat dinikmati masyarakat."},
+  {"c":"Pengetahuan Umum","q":"Pesawat terbang bermesin pertama direkayasa oleh ...","o":["Orville dan Wilbur Wright","Alexander Graham Bell","Henry Ford","Igor Sikorsky"],"a":0,"e":"Kakak-beradik Wright berhasil menerbangkan pesawat bermesin pertama pada 1903 di Kitty Hawk."},
+  {"c":"Pengetahuan Umum","q":"Alexander Graham Bell dikenal sebagai penemu ...","o":["Telepon","Televisi","Kompas","Mesin uap"],"a":0,"e":"Bell mematenkan telepon pada 1876 dan dikenang sebagai pelopor alat komunikasi jarak jauh."},
+  {"c":"Pengetahuan Umum","q":"Ilmuwan yang menyusun sistem penamaan binomial makhluk hidup adalah ...","o":["Carolus Linnaeus","Charles Darwin","Louis Pasteur","Gregor Mendel"],"a":0,"e":"Carolus Linnaeus mencetuskan tata nama binomial untuk mengelompokkan makhluk hidup secara ilmiah."},
+  {"c":"Pengetahuan Umum","q":"Organ tempat terjadinya pertukaran oksigen dan karbon dioksida pada manusia adalah ...","o":["Paru-paru","Jantung","Lambung","Hati"],"a":0,"e":"Di dalam paru-paru, alveolus menjadi tempat pertukaran oksigen dan karbon dioksida saat bernapas."},
+  {"c":"Pengetahuan Umum","q":"Organ yang bertugas memompa darah ke seluruh tubuh adalah ...","o":["Jantung","Paru-paru","Ginjal","Otak"],"a":0,"e":"Jantung memompa darah melalui sirkulasi darah besar dan kecil sehingga nutrisi sampai ke seluruh tubuh."},
+  {"c":"Pengetahuan Umum","q":"Organ yang menyaring limbah darah untuk menjadi urine adalah ...","o":["Ginjal","Hati","Lambung","Limpa"],"a":0,"e":"Ginjal menyaring darah, menghasilkan urine, dan menjaga keseimbangan air serta garam tubuh."},
+  {"c":"Pengetahuan Umum","q":"Vitamin yang dibentuk tubuh dengan bantuan sinar matahari pagi adalah ...","o":["Vitamin D","Vitamin C","Vitamin A","Vitamin K"],"a":0,"e":"Sinar matahari pagi membantu kulit membentuk vitamin D yang penting untuk kekuatan tulang."},
+  {"c":"Pengetahuan Umum","q":"Kebiasaan paling sederhana untuk mencegah penularan penyakit menular adalah ...","o":["Mencuci tangan dengan sabun","Berbagi barang pribadi bersama","Mengabaikan gejala demam berkepanjangan","Makan makanan yang jatuh ke lantai"],"a":0,"e":"Mencuci tangan dengan sabun membunuh kuman sehingga risiko penularan penyakit menurun drastis."},
+  {"c":"Pengetahuan Umum","q":"Kelompok zat gizi yang menjadi sumber energi utama tubuh adalah ...","o":["Karbohidrat","Vitamin","Mineral","Air"],"a":0,"e":"Karbohidrat, seperti nasi dan jagung, merupakan sumber energi utama bagi kegiatan tubuh."},
+  {"c":"Pengetahuan Umum","q":"Penyakit yang disebabkan oleh virus SARS-CoV-2 dan menjadi pandemi pada 2020 adalah ...","o":["COVID-19","Demam berdarah dengue","Tifus","Malaria"],"a":0,"e":"COVID-19 disebabkan oleh virus SARS-CoV-2 dan dinyatakan sebagai pandemi dunia pada 2020."}
+];
+const MONSTER_BANK=[
+  {"c":"Matematika Cepat","q":"7 × 8 = ...","o":["56","48","64","54"],"a":0,"e":"7 × 8 = 56."},
+  {"c":"Matematika Cepat","q":"9 × 6 = ...","o":["54","45","56","63"],"a":0,"e":"9 × 6 = 54."},
+  {"c":"Matematika Cepat","q":"72 ÷ 8 = ...","o":["9","8","7","12"],"a":0,"e":"72 ÷ 8 = 9."},
+  {"c":"Matematika Cepat","q":"84 ÷ 7 = ...","o":["12","11","14","13"],"a":0,"e":"84 ÷ 7 = 12."},
+  {"c":"Matematika Cepat","q":"15 + 27 = ...","o":["42","32","41","43"],"a":0,"e":"15 + 27 = 42."},
+  {"c":"Matematika Cepat","q":"63 - 28 = ...","o":["35","45","25","34"],"a":0,"e":"63 - 28 = 35."},
+  {"c":"Matematika Cepat","q":"6 + 8 × 3 = ...","o":["30","42","24","18"],"a":0,"e":"Kerjakan perkalian dahulu: 8 × 3 = 24, lalu 6 + 24 = 30."},
+  {"c":"Matematika Cepat","q":"20 - 12 ÷ 4 = ...","o":["17","2","8","14"],"a":0,"e":"12 ÷ 4 = 3, lalu 20 - 3 = 17."},
+  {"c":"Matematika Cepat","q":"3/4 dari 20 adalah ...","o":["15","12","16","10"],"a":0,"e":"20 ÷ 4 = 5, lalu 5 × 3 = 15."},
+  {"c":"Matematika Cepat","q":"1/2 + 1/4 = ...","o":["3/4","2/6","1/6","2/4"],"a":0,"e":"1/2 = 2/4, sehingga 2/4 + 1/4 = 3/4."},
+  {"c":"Matematika Cepat","q":"25% dari 60 adalah ...","o":["15","12","20","25"],"a":0,"e":"25% = 1/4, maka 60 ÷ 4 = 15."},
+  {"c":"Matematika Cepat","q":"10% dari 250 adalah ...","o":["25","2,5","50","20"],"a":0,"e":"10% sama dengan membagi 10, sehingga 250 ÷ 10 = 25."},
+  {"c":"Matematika Cepat","q":"-8 + 15 = ...","o":["7","-7","23","-23"],"a":0,"e":"-8 + 15 = 7."},
+  {"c":"Matematika Cepat","q":"-6 × (-4) = ...","o":["24","-24","10","-10"],"a":0,"e":"Bilangan negatif dikali negatif menghasilkan positif, yaitu 24."},
+  {"c":"Matematika Cepat","q":"5² + 3² = ...","o":["34","16","64","28"],"a":0,"e":"5² = 25 dan 3² = 9, sehingga 25 + 9 = 34."},
+  {"c":"Matematika Cepat","q":"2³ × 5 = ...","o":["40","30","80","25"],"a":0,"e":"2³ = 8, lalu 8 × 5 = 40."},
+  {"c":"Matematika Cepat","q":"100 - 37 = ...","o":["63","73","53","67"],"a":0,"e":"100 - 37 = 63."},
+  {"c":"Matematika Cepat","q":"48 ÷ 6 + 5 = ...","o":["13","12","18","8"],"a":0,"e":"48 ÷ 6 = 8, lalu 8 + 5 = 13."},
+  {"c":"Matematika Cepat","q":"7 × 7 - 9 = ...","o":["40","49","58","38"],"a":0,"e":"7 × 7 = 49, lalu 49 - 9 = 40."},
+  {"c":"Matematika Cepat","q":"36 ÷ 4 + 8 = ...","o":["17","15","9","20"],"a":0,"e":"36 ÷ 4 = 9, lalu 9 + 8 = 17."},
+  {"c":"Matematika Cepat","q":"2/3 dari 18 adalah ...","o":["12","9","14","6"],"a":0,"e":"18 ÷ 3 = 6, lalu 6 × 2 = 12."},
+  {"c":"Matematika Cepat","q":"0,5 + 0,25 = ...","o":["0,75","0,3","0,075","1,0"],"a":0,"e":"0,5 + 0,25 = 0,75."},
+  {"c":"Matematika Cepat","q":"40% dari 90 adalah ...","o":["36","30","45","54"],"a":0,"e":"10% dari 90 = 9, sehingga 40% = 36."},
+  {"c":"Matematika Cepat","q":"Bentuk paling sederhana dari 5/10 adalah ...","o":["1/2","1/5","2/5","5/1"],"a":0,"e":"Pembilang dan penyebut dibagi 5, sehingga 5/10 = 1/2."},
+  {"c":"Matematika Cepat","q":"14 × 3 = ...","o":["42","32","45","52"],"a":0,"e":"14 × 3 = 42."},
+  {"c":"Matematika Cepat","q":"96 ÷ 8 = ...","o":["12","11","13","14"],"a":0,"e":"96 ÷ 8 = 12."},
+  {"c":"Matematika Cepat","q":"19 + 6 × 2 = ...","o":["31","50","25","38"],"a":0,"e":"6 × 2 = 12, lalu 19 + 12 = 31."},
+  {"c":"Matematika Cepat","q":"50 - 18 + 7 = ...","o":["39","25","41","35"],"a":0,"e":"50 - 18 = 32, lalu 32 + 7 = 39."},
+  {"c":"Matematika Cepat","q":"12% dari 50 adalah ...","o":["6","5","12","10"],"a":0,"e":"10% dari 50 = 5 dan 2% = 1, sehingga 12% = 6."},
+  {"c":"Matematika Cepat","q":"8 + 12 ÷ 4 = ...","o":["11","5","14","10"],"a":0,"e":"12 ÷ 4 = 3, lalu 8 + 3 = 11."},
+  {"c":"Matematika Cepat","q":"3 × (4 + 5) = ...","o":["27","17","24","32"],"a":0,"e":"4 + 5 = 9, lalu 3 × 9 = 27."},
+  {"c":"Matematika Cepat","q":"45 ÷ 9 × 2 = ...","o":["10","20","5","12"],"a":0,"e":"45 ÷ 9 = 5, lalu 5 × 2 = 10."},
+  {"c":"Matematika Cepat","q":"4,5 + 2,5 = ...","o":["7","6","6,5","7,5"],"a":0,"e":"4,5 + 2,5 = 7."},
+  {"c":"Matematika Cepat","q":"0,8 × 5 = ...","o":["4","0,4","40","0,04"],"a":0,"e":"8 × 5 = 40, lalu letakkan satu angka desimal sehingga 4."},
+  {"c":"Matematika Cepat","q":"1/4 dari 48 adalah ...","o":["12","16","24","8"],"a":0,"e":"48 ÷ 4 = 12."},
+  {"c":"Matematika Cepat","q":"18 + 24 ÷ 6 = ...","o":["22","7","20","24"],"a":0,"e":"24 ÷ 6 = 4, lalu 18 + 4 = 22."},
+  {"c":"Matematika Cepat","q":"9 × 9 - 17 = ...","o":["64","74","55","81"],"a":0,"e":"9 × 9 = 81, lalu 81 - 17 = 64."},
+  {"c":"Matematika Cepat","q":"72 ÷ 9 + 11 = ...","o":["19","18","20","29"],"a":0,"e":"72 ÷ 9 = 8, lalu 8 + 11 = 19."},
+  {"c":"Matematika Cepat","q":"2,5 × 4 = ...","o":["10","1","100","6"],"a":0,"e":"2,5 × 4 = 10."},
+  {"c":"Matematika Cepat","q":"100 ÷ (2 + 3) = ...","o":["20","50","25","40"],"a":0,"e":"2 + 3 = 5, lalu 100 ÷ 5 = 20."}
+];
+const TIP={}; // tile pintu -> objek
+let S,P,G,L,M=[],Q=null,mode='menu',kd={},jv={x:0,y:0},ts=36,R2,lastT=0;
+let QR_DOOR,QR_MON,POS_DOOR=[],POS_MON=[],SEEN_DOOR=new Set(),SEEN_MON=new Set(),audioReturn='menu';
+const CYCLE=5.4,SAFE=3,WARN=1.2,ACTIVE=1.2;
+const fmt=t=>{const m=Math.floor(t/60),s=t-m*60;return String(m).padStart(2,'0')+':'+(s<10?'0':'')+s.toFixed(1)};
+const escHtml=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pbGet=()=>{try{const v=localStorage.getItem('scc_maze_pb');return v?+v:null}catch(e){return null}};
+const pbSet=v=>{try{localStorage.setItem('scc_maze_pb',v)}catch(e){}};
+
+// ---------------------------------------------------------------------------
+// PENGATURAN (kesulitan & sensitivitas) — disimpan di localStorage scc_settings
+// ---------------------------------------------------------------------------
+const SET_KEY='scc_settings',LB_KEY='scc_maze_leaderboard',SAVE_KEY='scc_maze_save',NAME_KEY='scc_maze_name';
+let settings={difficulty:'normal',joyDz:20};
+const DIFFS={mudah:{f:.75,see:.85},normal:{f:1,see:1},sulit:{f:1.22,see:1.15}};
+const diffF=()=>DIFFS[settings.difficulty]||DIFFS.normal;
+function loadSettings(){try{const p=JSON.parse(localStorage.getItem(SET_KEY)||'{}');if(DIFFS[p.difficulty])settings.difficulty=p.difficulty;if(+p.joyDz>=10&&+p.joyDz<=50)settings.joyDz=+p.joyDz}catch(e){}}
+function saveSettings(){try{localStorage.setItem(SET_KEY,JSON.stringify(settings))}catch(e){}}
+const nameGet=()=>{try{return localStorage.getItem(NAME_KEY)||''}catch(e){return''}};
+const nameSet=v=>{try{localStorage.setItem(NAME_KEY,v)}catch(e){}};
+// ---- skor & rank ----
+function calcScore(win){return Math.max(0,S.st.ok*100+S.keys*150+S.lives*50+(S.stBest||0)*20-S.st.bad*30+(win?400:0))}
+function rankOf(sc){return sc>=1700?'S':sc>=1300?'A':sc>=950?'B':sc>=650?'C':sc>=380?'D':'E'}
+// ---- umpan balik visual (flash layar + denyut HUD) ----
+function flashFx(color,alpha){const f=$('flash');if(!f)return;f.style.transition='none';f.style.background=color;f.style.opacity=alpha;requestAnimationFrame(()=>{f.style.transition='opacity .45s';f.style.opacity='0'})}
+function pulseHp(cls){const hp=$('hp');if(!hp)return;hp.classList.remove('heal','dmg');void hp.offsetWidth;hp.classList.add(cls)}
+function healFx(){flashFx('#4ade80',.2);pulseHp('heal')}
+function dmgFx(){flashFx('#ef4444',.24);pulseHp('dmg')}
+function keyFx(){flashFx('#fbbf24',.12)}
+// ---- penyimpanan progres (scc_maze_save) ----
+let pendingRec=null,lastBoardIdx=-1,boardReturn='menu';
+function saveGame(){if(!S||mode==='end')return;try{const st={v:1,t:+S.t.toFixed(2),lives:S.lives,keys:S.keys,inv:S.inv,slow:S.slow,streak:S.streak||0,best:S.stBest||0,st:S.st,got:[...S.got],doors:S.doors.map(d=>+d.left.toFixed(2)),px:+P.x.toFixed(3),py:+P.y.toFixed(3),spikeT:+S.spikeT.toFixed(3),ex:Array.from(S.ex),mons:M.map(m=>[+m.x.toFixed(3),+m.y.toFixed(3)])};localStorage.setItem(SAVE_KEY,JSON.stringify(st))}catch(e){}}
+function loadSave(){try{const s=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
+ if(!s||s.v!==1)return null;
+ const num=n=>typeof n==='number'&&isFinite(n);
+ if(!num(s.t)||s.t<0||!num(s.lives)||s.lives<1||s.lives>5||!num(s.keys)||s.keys<0||s.keys>5)return null;
+ if(!s.st||typeof s.st.ok!=='number'||typeof s.st.bad!=='number')return null;
+ if(!Array.isArray(s.got)||s.got.some(i=>!Number.isInteger(i)||i<0||i>4))return null;
+ if(!Array.isArray(s.doors)||s.doors.length!==4||s.doors.some(v=>!num(v)))return null;
+ if(!Array.isArray(s.ex)||s.ex.length!==W*W||s.ex.some(v=>v!==0&&v!==1))return null;
+ if(!Array.isArray(s.mons)||s.mons.length!==7||s.mons.some(m=>!Array.isArray(m)||!num(m[0])||!num(m[1])))return null;
+ if(!num(s.px)||!num(s.py)||!num(s.spikeT))return null;
+ if(s.px<.5||s.px>W-.5||s.py<.5||s.py>W-.5)return null;
+ return s;
+}catch(e){return null}}
+function clearSave(){try{localStorage.removeItem(SAVE_KEY)}catch(e){}}
+// ---- papan skor lokal (scc_maze_leaderboard) ----
+function loadBoard(){try{const a=JSON.parse(localStorage.getItem(LB_KEY)||'[]');if(!Array.isArray(a))return[];
+ return a.filter(r=>r&&typeof r.n==='string'&&r.n.trim()&&Number.isFinite(r.s)&&Number.isFinite(r.t)&&Number.isInteger(r.ok)&&Number.isInteger(r.bad))}catch(e){return[]}}
+function saveBoard(l){try{localStorage.setItem(LB_KEY,JSON.stringify(l))}catch(e){}}
+function addBoardRecord(rec){const l=loadBoard();l.push(rec);l.sort((a,b)=>b.s-a.s||a.t-b.t);if(l.length>100)l.length=100;const i=l.indexOf(rec);if(i<0)return -1;saveBoard(l);return i}
+function fmtDate(iso){const d=new Date(iso);if(isNaN(d))return'-';return d.toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}
+function renderBoard(){
+ const list=loadBoard().slice(0,10),b=$('lbBody');let h='';
+ if(!list.length)h='<p class="sm">Belum ada skor tersimpan. Selesaikan permainan (kumpulkan 5 kunci lalu keluar maze) agar tercatat.</p>';
+ else{
+  h='<table class="lbt"><tr><th>#</th><th>Nama</th><th>Skor</th><th>Waktu</th><th>B/S</th><th>Nyawa</th><th>Tanggal</th></tr>';
+  list.forEach((r,i)=>{h+='<tr'+(i===lastBoardIdx?' class="new"':'')+'><td>'+(i+1)+'</td><td>'+escHtml(r.n.slice(0,16))+'</td><td><b>'+r.s+'</b> ('+escHtml(r.rank||'-')+')</td><td>'+fmt(r.t)+'</td><td>'+r.ok+'/'+r.bad+'</td><td>'+r.lives+'/5</td><td>'+fmtDate(r.date)+'</td></tr>'});
+  h+='</table><p class="sm">'+(lastBoardIdx>=0&&lastBoardIdx<10?'Hasil terbaru kamu ditandai baris biru. ':'')+'Menampilkan 10 skor terbaik (skor sama → waktu tercepat).</p>';
+ }
+ b.innerHTML=h;
+}
+function clearBoard(){try{localStorage.removeItem(LB_KEY)}catch(e){}lastBoardIdx=-1;renderBoard()}
+// ---- UI pengaturan ----
+function syncSettingsUI(){syncAudioUI();
+ const s=$('volSens');if(s){s.value=settings.joyDz;$('volSensVal').textContent=settings.joyDz+'%'}
+ [['dMudah','mudah'],['dNormal','normal'],['dSulit','sulit']].forEach(([id,d])=>{const el=$(id);if(el)el.classList.toggle('sel',settings.difficulty===d)});
+}
+
+// ---------------------------------------------------------------------------
+// AUDIO: original Web Audio 8-bit synth. No external or copyrighted assets.
+// ---------------------------------------------------------------------------
+const BGM_MELODY=[62,0,65,0,69,0,65,0,62,0,65,0,69,0,72,0,74,0,72,0,69,0,65,0,62,0,69,0,65,0,62,0,69,0,72,0,74,0,72,0,69,0,65,0,62,0,65,0,67,0,69,0,72,0,69,0,65,0,62,0,60,0,62,0];
+const BGM_BASS=[38,0,0,0,45,0,0,0,38,0,0,0,41,0,0,0,43,0,0,0,45,0,0,0,38,0,0,0,33,0,0,0,41,0,0,0,43,0,0,0,45,0,0,0,38,0,0,0,39,0,0,0,41,0,0,0,43,0,0,0,33,0,0,0];
+const AUDIO={
+ ctx:null,master:null,bgm:null,sfx:null,noise:null,supported:true,
+ muted:false,bgmVol:.35,sfxVol:.6,bgmPlaying:false,timer:null,step:0,nextTime:0,
+ init(){
+  if(this.ctx)return true;
+  try{
+   const AC=window.AudioContext||window.webkitAudioContext;
+   if(!AC){this.supported=false;return false}
+   const ctx=new AC();this.ctx=ctx;this.supported=true;
+   const master=ctx.createGain();master.gain.value=this.muted?0:1;master.connect(ctx.destination);
+   const bgm=ctx.createGain();bgm.gain.value=this.bgmVol;bgm.connect(master);
+   const sfx=ctx.createGain();sfx.gain.value=this.sfxVol;sfx.connect(master);
+   this.master=master;this.bgm=bgm;this.sfx=sfx;
+   const len=Math.max(1,Math.floor(ctx.sampleRate*.4)),buf=ctx.createBuffer(1,len,ctx.sampleRate),d=buf.getChannelData(0);
+   for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+   this.noise=buf;
+   return true;
+  }catch(e){this.supported=false;return false}
+ },
+ ensure(){const ok=this.init();if(ok&&this.ctx.state==='suspended')this.ctx.resume().catch(()=>{});return ok},
+ midi(n){return 440*Math.pow(2,(n-69)/12)},
+ tone(freq,when,dur,type,vol,dest,slide){
+  if(!this.ctx||!dest)return;
+  try{
+   const t=Math.max(this.ctx.currentTime,when||this.ctx.currentTime),o=this.ctx.createOscillator(),g=this.ctx.createGain();
+   o.type=type||'square';o.frequency.setValueAtTime(Math.max(20,freq),t);
+   if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(20,slide),t+dur);
+   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol||.1),t+.008);
+   g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+   o.connect(g);g.connect(dest);o.start(t);o.stop(t+dur+.03);
+  }catch(e){}
+ },
+ noiseBurst(when,dur,vol,freq,dest){
+  if(!this.ctx||!this.noise)return;
+  try{
+   const t=Math.max(this.ctx.currentTime,when||this.ctx.currentTime),src=this.ctx.createBufferSource(),f=this.ctx.createBiquadFilter(),g=this.ctx.createGain();
+   src.buffer=this.noise;f.type='highpass';f.frequency.value=freq||800;
+   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,vol||.1),t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+   src.connect(f);f.connect(g);g.connect(dest||this.sfx);src.start(t);src.stop(t+dur+.03);
+  }catch(e){}
+ },
+ startBGM(){
+  if(!this.ctx||this.bgmPlaying)return;
+  this.bgmPlaying=true;this.step=0;this.nextTime=this.ctx.currentTime+.06;
+  this.schedule();this.timer=setInterval(()=>this.schedule(),100);
+ },
+ stopBGM(){this.bgmPlaying=false;if(this.timer){clearInterval(this.timer);this.timer=null}},
+ schedule(){
+  if(!this.bgmPlaying||!this.ctx)return;
+  const ahead=this.ctx.currentTime+.35;
+  while(this.nextTime<ahead){
+   const i=this.step%64,m=BGM_MELODY[i],b=BGM_BASS[i];
+   if(m)this.tone(this.midi(m),this.nextTime,.13,'square',.055,this.bgm);
+   if(b)this.tone(this.midi(b),this.nextTime,.26,'triangle',.075,this.bgm);
+   if(i%4===0)this.noiseBurst(this.nextTime,.03,.018,260,this.bgm);
+   this.nextTime+=60/104/2;this.step++;
+  }
+ },
+ setBgmVolume(v){this.bgmVol=Math.max(0,Math.min(1,v));if(this.bgm)this.bgm.gain.setTargetAtTime(this.bgmVol,this.ctx.currentTime,.02);this.save()},
+ setSfxVolume(v){this.sfxVol=Math.max(0,Math.min(1,v));if(this.sfx)this.sfx.gain.setTargetAtTime(this.sfxVol,this.ctx.currentTime,.02);this.save()},
+ setMuted(m){this.muted=!!m;if(this.master){const t=this.ctx.currentTime;this.master.gain.cancelScheduledValues(t);this.master.gain.setTargetAtTime(this.muted?0:1,t,.01)}this.save()},
+ save(){try{localStorage.setItem('scc_audio',JSON.stringify({bgm:this.bgmVol,sfx:this.sfxVol,muted:this.muted}))}catch(e){}},
+ key(){if(!this.ctx)return;const t=this.ctx.currentTime;[659,880,1175].forEach((f,i)=>this.tone(f,t+i*.055,.1,'square',.16))},
+ correct(){if(!this.ctx)return;const t=this.ctx.currentTime;[523,659,784,1046].forEach((f,i)=>this.tone(f,t+i*.06,.13,'square',.15))},
+ wrong(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(196,t,.18,'sawtooth',.12,this.sfx,130);this.tone(147,t+.12,.22,'sawtooth',.12,this.sfx,98)},
+ monster(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(110,t,.28,'sawtooth',.13,this.sfx,82);this.tone(82,t+.2,.3,'square',.1,this.sfx,55);this.noiseBurst(t,.18,.05,300)},
+ attack(){if(!this.ctx)return;const t=this.ctx.currentTime;this.noiseBurst(t,.25,.17,180);this.tone(180,t,.2,'sawtooth',.15,this.sfx,60)},
+ spikeWarn(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(880,t,.07,'square',.12);this.tone(880,t+.12,.07,'square',.12)},
+ spikeActive(){if(!this.ctx)return;const t=this.ctx.currentTime;this.noiseBurst(t,.09,.15,600);this.tone(300,t,.1,'square',.14,this.sfx,120)},
+ spikeHit(){if(!this.ctx)return;const t=this.ctx.currentTime;this.noiseBurst(t,.12,.19,900);this.tone(140,t,.18,'sawtooth',.18,this.sfx,70)},
+ door(){if(!this.ctx)return;const t=this.ctx.currentTime;this.tone(160,t,.3,'sawtooth',.12,this.sfx,90);this.tone(240,t+.08,.25,'triangle',.12,this.sfx,180);this.noiseBurst(t,.12,.04,500)},
+ victory(){if(!this.ctx)return;const t=this.ctx.currentTime;[523,659,784,1046,1318].forEach((f,i)=>this.tone(f,t+i*.12,.22,'square',.17))},
+ gameOver(){if(!this.ctx)return;const t=this.ctx.currentTime;[392,330,262,196,131].forEach((f,i)=>this.tone(f,t+i*.18,.28,'sawtooth',.15))}
+};
+function loadAudioPrefs(){try{const p=JSON.parse(localStorage.getItem('scc_audio')||'{}');if(typeof p.bgm==='number')AUDIO.bgmVol=Math.max(0,Math.min(1,p.bgm));if(typeof p.sfx==='number')AUDIO.sfxVol=Math.max(0,Math.min(1,p.sfx));if(typeof p.muted==='boolean')AUDIO.muted=p.muted}catch(e){}}
+function sfx(name){if(!AUDIO.ctx||AUDIO.muted)return;try{const f=AUDIO[name];if(f)f.call(AUDIO)}catch(e){}}
+function syncAudioUI(){
+ const b=$('volBgm'),s=$('volSfx'),m=$('bMute'),st=$('audStat'),q=$('audQ');
+ if(b){b.value=Math.round(AUDIO.bgmVol*100);$('volBgmVal').textContent=Math.round(AUDIO.bgmVol*100)+'%'}
+ if(s){s.value=Math.round(AUDIO.sfxVol*100);$('volSfxVal').textContent=Math.round(AUDIO.sfxVol*100)+'%'}
+ if(m)m.textContent=AUDIO.muted?'AKTIFKAN SUARA':'MATIKAN SUARA';
+ if(st)st.textContent=!AUDIO.supported?'Audio tidak tersedia di perangkat ini.':AUDIO.ctx?'Audio siap.':'Audio akan aktif setelah interaksi pertama.';
+ if(q){q.textContent=AUDIO.muted?'🔇':'🔊';q.classList.toggle('muted',AUDIO.muted)}
+}
+function toggleMute(){AUDIO.ensure();AUDIO.setMuted(!AUDIO.muted);syncAudioUI();if(!AUDIO.muted)sfx('correct');if(S&&mode==='play')toast('Suara '+(AUDIO.muted?'dimatikan':'dinyalakan'),1.2)}
+function showSettings(from){audioReturn=from||'menu';syncSettingsUI();show('settings')}
+function show(id){document.querySelectorAll('.scr').forEach(e=>e.classList.toggle('on',e.id===id));if(id==='menu'){const p=pbGet();$('pbt').textContent=p?'Personal best: '+fmt(p):'Belum ada personal best';const sv=loadSave();$('bCont').style.display=(sv&&sv.lives>0)?'block':'none'}}
+function toast(t,sec){const m=$('msg');m.textContent=t;m.style.display='block';if(S)S.msgT=sec||2}
+
+// ------------------------------- spike helpers -----------------------------
+function spikeInfo(i){const off=L.trapOffsets[i]||0,t=(S.spikeT+off)%CYCLE;if(t<SAFE)return{s:0,remain:SAFE-t,dur:SAFE};if(t<SAFE+WARN)return{s:1,remain:SAFE+WARN-t,dur:WARN};return{s:2,remain:CYCLE-t,dur:ACTIVE}}
+function spikeIndexAt(tx,ty){if(!S||!S.trapMap)return -1;const v=S.trapMap.get(ty*W+tx);return v===undefined?-1:v}
+function spikeSound(name,i,force){
+ const x=(L.traps[i]%W)+.5,y=((L.traps[i]/W)|0)+.5;
+ if(!force&&Math.hypot(P.x-x,P.y-y)>7)return;
+ const now=S.spikeT;
+ if(!force&&now-(S.spikeSfxT??-99)<.09)return;
+ S.spikeSfxT=now;sfx(name);
+}
+function updateSpikes(dt){
+ S.spikeT+=dt;S.spikeFlash=Math.max(0,S.spikeFlash-dt);
+ for(let i=0;i<L.traps.length;i++){
+  const info=spikeInfo(i),prev=S.trapPrev[i];S.spikeStates[i]=info;
+  if(prev!==info.s){
+   S.trapPrev[i]=info.s;
+   if(info.s===1)spikeSound('spikeWarn',i);
+   else if(info.s===2)spikeSound('spikeActive',i);
+  }
+ }
+ for(let i=0;i<L.traps.length;i++){
+  const info=S.spikeStates[i];if(info.s!==2)continue;
+  const tile=L.traps[i],x=tile%W,y=(tile/W)|0;
+  if(P.x+.26>x&&P.x-.26<x+1&&P.y+.26>y&&P.y-.26<y+1){
+   const cycle=Math.floor((S.spikeT+(L.trapOffsets[i]||0))/CYCLE);
+   if(S.trapHitCycle[i]!==cycle){
+    S.trapHitCycle[i]=cycle;S.slow=Math.max(S.slow,1.2);S.t+=3;S.st.traps++;S.spikeFlash=.45;
+    spikeSound('spikeHit',i,true);toast('Tertusuk spike! Gerak melambat +3 detik',1.6);
+   }
+  }
+ }
+}
+function solid(tx,ty){if(tx<0||ty<0||tx>=W||ty>=W)return true;const i=ty*W+tx;if(G[i])return true;const d=TIP[i];return !!d&&d.left<=0}
+function hit(x,y){
+ const r=.28,cur=S?spikeIndexAt(Math.floor(P.x),Math.floor(P.y)):-1;
+ const pts=[[x-r,y-r],[x+r,y-r],[x-r,y+r],[x+r,y+r]];
+ for(const[cx0,cy0]of pts){
+  const tx=Math.floor(cx0),ty=Math.floor(cy0);
+  if(solid(tx,ty))return true;
+  const si=spikeIndexAt(tx,ty);
+  if(si>=0&&S.spikeStates[si]&&S.spikeStates[si].s===2&&si!==cur)return true;
+ }
+ return false;
+}
+
+// ----------------------------- question selection --------------------------
+function nextPos(bag,rng){
+ if(!bag.length){bag.push(0,1,2,3);for(let i=3;i>0;i--){const j=Math.floor(rng()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]]}}
+ return bag.pop();
+}
+function resetQuestions(){QR_DOOR=rng(SEED+911+((Math.random()*1e9)|0));QR_MON=rng(SEED+1201+((Math.random()*1e9)|0));POS_DOOR=[];POS_MON=[];SEEN_DOOR=new Set();SEEN_MON=new Set()}
+// Klasifikasi kesulitan soal (heuristik): mudah/sedang/sulit untuk progresi bertahap.
+function classifyDifficulty(q){
+ const s=q.q,m=q.c==='Matematika';
+ let c=0;
+ if(/persamaan|sistem|kuadrat|gradien/.test(s))c++;                         // aljabar
+ if(/pythagoras|siku-siku|miring|sebangun|bayangan|translasi/.test(s))c++;  // geometri/transformasi
+ if(/median|peluang|modus|probabilitas|statistik|rata-rata/.test(s))c++;    // statistika
+ if(m&&/×/.test(s)&&/÷/.test(s))c++;                                        // aritmetika multi-langkah
+ if(m&&/%/.test(s)&&/Rp|000/.test(s))c++;                                   // persen uang
+ if(m&&/\d\s*\/\s*\d/.test(s)&&/[+×]/.test(s))c++;                          // operasi pecahan
+ if(/skala|berskala|peta/.test(s))c++;                                      // skala peta
+ if(/reported|comparative|superlative|passive|conditional|past continuous/i.test(s))c++; // grammar lanjut
+ const hard=/√|akar|[²³⁴⁵]|translasi|siku-siku|sistem persamaan|fungsi kuadrat/.test(s)||c>=2;
+ const med=c===1||s.length>72||q.o.some(o=>String(o).length>=16);
+ return hard?'hard':med?'med':'easy';
+}
+const DIFFQ={easy:[],med:[],hard:[]};
+for(let i=0;i<BANK.length;i++)DIFFQ[classifyDifficulty(BANK[i])].push(i);
+// Susun opsi: jawaban benar dipindah ke posisi 'target' (dari kantong posisi seimbang),
+// opsi salah diacak. Jadi posisi jawaban tidak bisa diprediksi.
+function assemble(q,target,r){
+ const distractors=q.o.filter((_,i)=>i!==q.a);
+ for(let i=distractors.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[distractors[i],distractors[j]]=[distractors[j],distractors[i]]}
+ const o=[];let d=0;
+ for(let i=0;i<4;i++){if(i===target)o.push(q.o[q.a]);else o.push(distractors[d++])}
+ return{c:q.c,q:q.q,o,a:target,e:q.e};
+}
+function pickQuestion(kind){
+ const mon=kind==='mon',bank=mon?MONSTER_BANK:BANK,seen=mon?SEEN_MON:SEEN_DOOR,rng=mon?QR_MON:QR_DOOR,bag=mon?POS_MON:POS_DOOR;
+ if(seen.size>=bank.length)seen.clear();
+ let idx;
+ if(mon){
+  idx=Math.floor(rng()*bank.length);
+  if(seen.has(idx)){for(let i=0;i<bank.length;i++){if(!seen.has(i)){idx=i;break}}}
+ }else{
+  // Progresi kesulitan soal pintu: awal mudah → sedang → sulit, tanpa lompatan mendadak.
+  const n=S.st.ok+S.st.bad,r=rng();
+  const cat=n<5?'easy':n<12?(r<.6?'med':'easy'):(r<.55?'hard':r<.85?'med':'easy');
+  let pool=null,cl=DIFFQ[cat].length?cat:(DIFFQ.med.length?'med':(DIFFQ.easy.length?'easy':null));
+  if(cl){pool=DIFFQ[cl].filter(i=>!seen.has(i));
+   if(!pool.length){DIFFQ[cl].forEach(i=>seen.delete(i));pool=DIFFQ[cl]} // boleh diulang bila tier habis
+   idx=pool[Math.floor(rng()*pool.length)];
+  }else{idx=Math.floor(rng()*bank.length)} // fallback aman
+ }
+ seen.add(idx);
+ return assemble(bank[idx],nextPos(bag,rng),rng);
+}
+function validateBanks(){
+ const errors=[],globalSeen=new Map(),catCount={};
+ const check=(bank,label,min)=>{
+  if(bank.length<min)errors.push(label+' hanya berisi '+bank.length+' soal, minimal '+min);
+  const localSeen=new Set();
+  for(let i=0;i<bank.length;i++){
+   const q=bank[i],tag=label+' #'+(i+1);
+   if(!q||typeof q.q!=='string'||!q.q.trim()){errors.push(tag+' pertanyaan kosong');continue}
+   if(typeof q.c!=='string'||!q.c.trim())errors.push(tag+' kategori kosong');
+   if(!Array.isArray(q.o)||q.o.length!==4)errors.push(tag+' jumlah opsi bukan 4');
+   else{
+    const opts=q.o.map(x=>String(x).trim());
+    if(new Set(opts).size!==4)errors.push(tag+' opsi duplikat: '+opts.join(' / '));
+    if(opts.some(x=>!x))errors.push(tag+' ada opsi kosong');
+   }
+   if(!Number.isInteger(q.a)||q.a<0||q.a>3)errors.push(tag+' kunci jawaban tidak valid');
+   if(!q.e||String(q.e).trim().length<10)errors.push(tag+' penjelasan kosong/terlalu pendek');
+   const norm=q.q.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+   if(localSeen.has(norm))errors.push(tag+' duplikat di dalam bank: '+q.q);
+   localSeen.add(norm);
+   if(globalSeen.has(norm))errors.push(tag+' duplikat dengan '+globalSeen.get(norm)+': '+q.q);
+   else globalSeen.set(norm,tag);
+   catCount[q.c]=(catCount[q.c]||0)+1;
+  }
+  const bag=[],rngLocal=rng(SEED+777),dist=[0,0,0,0];
+  for(let i=0;i<bank.length;i++)dist[nextPos(bag,rngLocal)]++;
+  if(Math.max(...dist)-Math.min(...dist)>2)errors.push(label+' distribusi posisi jawaban tidak seimbang: '+dist.join('/'));
+  return dist;
+ };
+ const doorDist=check(BANK,'BANK',240),monDist=check(MONSTER_BANK,'MONSTER_BANK',40);
+ const required={'Matematika':40,'IPS':40,'Sejarah Indonesia':40,'Bahasa Indonesia':40,'Bahasa Inggris':40,'Pengetahuan Umum':40};
+ for(const k in required)if((catCount[k]||0)<required[k])errors.push('Kategori '+k+' hanya '+(catCount[k]||0)+' soal, minimal '+required[k]);
+ return{ok:errors.length===0,errors,counts:{bank:BANK.length,monster:MONSTER_BANK.length,categories:catCount},positions:{door:doorDist,monster:monDist}};
+}
+
+// -------------------------------- game flow --------------------------------
+function start(restored){
+ // restored: objek hasil loadSave() untuk memulihkan progres; event/undefined = mulai baru.
+ const r=(restored&&restored.v===1)?restored:null;
+ if(!r)clearSave();
+ L=layout(SEED);G=L.g;for(const k in TIP)delete TIP[k];
+ S={t:0,lives:5,keys:0,inv:0,slow:0,msgT:0,st:{ok:0,bad:0,hits:0,traps:0,doors:0},streak:0,stBest:0,saveT:0,ex:new Uint8Array(W*W),got:new Set(),doors:L.doors.map(i=>TIP[i]={i,left:0}),spikeT:0,spikeFlash:0,spikeSfxT:-99,monsterSfxT:-99,trapMap:new Map(),spikeStates:[],trapPrev:[],trapHitCycle:[]};
+ L.traps.forEach((tile,i)=>{S.trapMap.set(tile,i);S.spikeStates[i]=spikeInfo(i);S.trapPrev[i]=S.spikeStates[i].s;S.trapHitCycle[i]=-1});
+ P={x:1.5,y:1.5};R2=rng(SEED+7);Q=null;resetQuestions();
+ if(r){ // pulihkan state tanpa menjalankan ulang layout (deterministik dari SEED)
+  S.t=r.t;S.lives=r.lives|0;S.keys=r.keys|0;S.inv=r.inv||0;S.slow=r.slow||0;
+  S.streak=r.streak|0;S.stBest=r.best|0;S.st={ok:r.st.ok|0,bad:r.st.bad|0,hits:r.st.hits|0,traps:r.st.traps|0,doors:r.st.doors|0};
+  S.got=new Set(r.got);S.ex=Uint8Array.from(r.ex);S.spikeT=r.spikeT;
+  r.doors.forEach((v,k)=>{const d=S.doors[k];if(d){d.left=v;TIP[d.i].left=v}});
+  P={x:r.px,y:r.py};
+  if(solid(Math.floor(P.x),Math.floor(P.y))){P={x:1.5,y:1.5}} // perlindungan posisi korup
+  // posisi monster dipulihkan setelah M dibangun ulang di bawah
+ }
+ M=L.mons.map(([x,y])=>({x:x+.5,y:y+.5,hx:x,hy:y,state:'patrol',chase:0,path:[],spd:0,cd:0,idleT:.3+R2()*1.6,retT:0,stun:0}));
+ if(r){ // pulihkan posisi monster, lalu hitung ulang fase spike sesuai spikeT tersimpan
+  r.mons.forEach((m2,k)=>{if(M[k]&&isFinite(m2[0])&&isFinite(m2[1])){M[k].x=m2[0];M[k].y=m2[1];M[k].idleT=.4}});
+  L.traps.forEach((tile,i)=>{S.spikeStates[i]=spikeInfo(i);S.trapPrev[i]=S.spikeStates[i].s;S.trapHitCycle[i]=-1});
+  toast('Progres dipulihkan. Lanjutkan!',2.5);
+ }
+ $('q').classList.remove('on');$('msg').style.display='none';mode='play';show(null);document.body.classList.add('play');resize();
+ AUDIO.ensure();AUDIO.startBGM();syncAudioUI();
+ toast('Cari 5 kunci! Jawab soal di pintu kayu dengan E / Spasi.',3);
+}
+function toMenu(){mode='menu';document.body.classList.remove('play');$('q').classList.remove('on');$('msg').style.display='none';AUDIO.stopBGM();show('menu')}
+function pathTo(m,tx,ty){const sx=Math.floor(m.x),sy=Math.floor(m.y),blk=new Uint8Array(W*W);for(const d of S.doors)if(d.left<=0)blk[d.i]=1;
+ for(let i=0;i<L.traps.length;i++){const inf=S.spikeStates[i];if(inf&&inf.s===2)blk[L.traps[i]]=1}
+ const par=new Int32Array(W*W).fill(-1),q=[sy*W+sx];par[q[0]]=q[0];const T=ty*W+tx;
+ for(let h=0;h<q.length&&par[T]<0;h++){const i=q[h],x=i%W,y=(i/W)|0;for(const[a,b]of DIRS){const j=(y+b)*W+x+a;if(j<0||j>=W*W||G[j]||blk[j]||par[j]>=0)continue;par[j]=i;q.push(j)}}
+ const p=[];if(par[T]<0)return p;for(let i=T;i!==q[0];i=par[i])p.unshift([i%W,(i/W)|0]);return p}
+// Monster AI constants. SEE < DROP (hysteresis): monsters only start chasing
+// inside SEE tiles and stop chasing beyond DROP tiles, then return home after
+// a delay. Speeds are kept well below the player's 4.6 (no sudden jumps).
+const MON={SEE:4.6,DROP:7.8,SPD:2.6,SPD_HOME:1.7,SPD_WALK:1.25,DELAY:1.4,REPATH:.4};
+function pathBlocked(m){
+ const t=m.path[0];if(!t)return false;
+ const si=spikeIndexAt(t[0],t[1]);
+ return solid(t[0],t[1])||(si>=0&&S.spikeStates[si].s===2)}
+// Same collision rules as the player's hit(): walls, closed (locked) doors and
+// currently active spikes block movement; the entity's own tile is exempt so
+// it can still leave a square it stands on. Never teleports through obstacles.
+function mBlocked(m,x,y){
+ const cur=spikeIndexAt(Math.floor(m.x),Math.floor(m.y)),r=.24;
+ const pts=[[x-r,y-r],[x+r,y-r],[x-r,y+r],[x+r,y+r]];
+ for(const[px,py]of pts){
+  const tx=Math.floor(px),ty=Math.floor(py);
+  if(solid(tx,ty))return true;
+  const si=spikeIndexAt(tx,ty);
+  if(si>=0&&si!==cur&&S.spikeStates[si]&&S.spikeStates[si].s===2)return true}
+ return false}
+function mStep(m,dt){
+ if(m.stun>0){m.stun-=dt;return}
+ const d=Math.hypot(P.x-m.x,P.y-m.y),DF=diffF(),SEE=MON.SEE*DF.see,DROP=MON.DROP*DF.see;
+ // --- perception: chase with hysteresis (diskalakan kesulitan) ---------
+ if(m.state==='chase'){
+  m.chase=1;
+  if(d>DROP){m.state='lost';m.chase=0;m.retT=MON.DELAY;m.path=[];m.cd=0;return}
+ }else if(d<SEE){
+  if(!m.chase&&S.spikeT-S.monsterSfxT>1.2){S.monsterSfxT=S.spikeT;sfx('monster')}
+  m.state='chase';m.chase=1;m.cd=0;
+ }else if(m.state==='lost'){ // short delay before going back to idle
+  m.retT-=dt;
+  if(m.retT<=0){m.state='home';m.chase=0;m.cd=.5;m.path=pathTo(m,m.hx,m.hy)}
+ }
+ m.cd-=dt;
+ // A door closing or a spike activating under our path invalidates it.
+ if(m.path.length&&pathBlocked(m)){m.path=[];m.cd=0}
+ let spTgt=(m.state==='chase'?MON.SPD:m.state==='home'?MON.SPD_HOME:MON.SPD_WALK)*DF.f;
+ // --- decide route ----------------------------------------------------
+ if(m.state==='chase'){
+  if(m.cd<=0){m.cd=MON.REPATH;const p=pathTo(m,Math.floor(P.x),Math.floor(P.y));
+   if(p.length)m.path=p;else{m.path=[];m.cd=.3}} // target unreachable: wait, then retry
+ }else if(m.state==='home'){
+  if(!m.path.length){
+   if(Math.hypot(m.x-(m.hx+.5),m.y-(m.hy+.5))<.6){m.state='patrol';m.idleT=.8}
+   else if(m.cd<=0){m.cd=.6;const p=pathTo(m,m.hx,m.hy);if(!p.length){m.state='patrol';m.idleT=1}}
+  }
+ }else{ // patrol / idle while outside detection range
+  if(m.idleT>0){m.idleT-=dt;spTgt=0}
+  else if(!m.path.length&&m.cd<=0){m.cd=.6;const[wx,wy]=L.cells[Math.floor(R2()*L.cells.length)];const p=pathTo(m,wx,wy);if(p.length)m.path=p;else m.idleT=.5}
+ }
+ // --- move along path with collision (axis separated, like the player) -
+ let moved=false;
+ if(m.path.length){
+  const t=m.path[0],dx=t[0]+.5-m.x,dy=t[1]+.5-m.y,l=Math.hypot(dx,dy);
+  m.spd+=(spTgt-m.spd)*Math.min(1,6*dt); // ease speed, no sudden changes
+  const st=m.spd*dt;
+  let nx=m.x,ny=m.y;
+  if(l<=st){nx+=dx;ny+=dy;m.path.shift();if(!m.path.length&&m.state==='patrol')m.idleT=.8+R2()*1.5}
+  else{nx+=dx/l*st;ny+=dy/l*st}
+  if(!mBlocked(m,nx,m.y)){m.x=nx;moved=true}
+  if(!mBlocked(m,m.x,ny)){m.y=ny;moved=true}
+ }else m.spd+=(0-m.spd)*Math.min(1,6*dt);
+ if(!moved&&m.path.length){if(m.state==='chase'){m.cd=0;m.path=[]}} // stuck: re-route
+}
+function mv(dx,dy){if(!hit(P.x+dx,P.y+dy)){P.x+=dx;P.y+=dy}}
+function update(dt){
+ if(mode==='q'){S.t+=dt;
+  if(Q&&Q.mon&&!Q.done){Q.left-=dt;$('qbi').style.width=Math.max(0,Q.left/10*100)+'%';if(Q.left<=0)ans(-1)}
+  else if(Q&&Q.done){Q.expLeft-=dt;$('qContT').textContent='('+Math.max(0,Math.ceil(Q.expLeft))+'s)';if(Q.expLeft<=0)closeExpl()}
+  return}
+ if(mode!=='play')return;
+ S.t+=dt;S.inv=Math.max(0,S.inv-dt);S.slow=Math.max(0,S.slow-dt);
+ S.saveT=(S.saveT||0)+dt;if(S.saveT>=5){S.saveT=0;saveGame()}
+ updateSpikes(dt);
+ if(S.msgT>0){S.msgT-=dt;if(S.msgT<=0)$('msg').style.display='none'}
+ let ix=(kd.ArrowRight||kd.KeyD?1:0)-(kd.ArrowLeft||kd.KeyA?1:0)+jv.x,iy=(kd.ArrowDown||kd.KeyS?1:0)-(kd.ArrowUp||kd.KeyW?1:0)+jv.y;
+ const l=Math.hypot(ix,iy);if(l>1){ix/=l;iy/=l}const sp=4.6*(S.slow>0?.5:1)*dt;mv(ix*sp,0);mv(0,iy*sp);
+ const pt=Math.floor(P.y)*W+Math.floor(P.x);
+ for(const d of S.doors)if(d.left>0){d.left-=dt;if(d.left<=0&&d.i===pt)d.left=.3}
+ L.keys.forEach((k,i)=>{if(!S.got.has(i)&&Math.hypot(P.x-k[0]-.5,P.y-k[1]-.5)<.6){S.got.add(i);S.keys++;sfx('key');keyFx();toast('Kunci '+S.keys+'/5 didapat!',1.5);if(S.keys>=5){toast('Semua kunci terkumpul! Pintu keluar terbuka.',2.5);sfx('door');flashFx('#22c55e',.16)}}});
+ if(pt===L.ex[1]*W+L.ex[0]){if(S.keys>=5)return finish(true);if(S.msgT<=0)toast('Pintu keluar terkunci. Butuh 5 kunci ('+S.keys+'/5).',1.5)}
+ for(const m of M){mStep(m,dt);if(S.inv<=0&&mode==='play'&&Math.hypot(P.x-m.x,P.y-m.y)<.65){S.st.hits++;sfx('attack');flashFx('#c026d3',.2);openQ(true);break}}
+ for(let y=-5;y<=5;y++)for(let x=-5;x<=5;x++){const tx=Math.floor(P.x)+x,ty=Math.floor(P.y)+y;if(tx>=0&&ty>=0&&tx<W&&ty<W&&Math.hypot(tx+.5-P.x,ty+.5-P.y)<4.6)S.ex[ty*W+tx]=1}
+}
+function nearDoor(){for(const d of S.doors)if(d.left<=0&&Math.hypot(d.i%W+.5-P.x,((d.i/W)|0)+.5-P.y)<1.5)return d;return null}
+function interact(){if(mode!=='play')return;const d=nearDoor();if(d)openQ(false,d)}
+function openQ(mon,door){
+ if(mode==='q')return;
+ if(mon&&SEEN_MON.size>=MONSTER_BANK.length){
+  S.inv=3;for(const m of M)if(Math.hypot(m.x-P.x,m.y-P.y)<4){m.stun=4;m.path=[];m.chase=0}
+  toast('Monster mundur! Semua soal serangan sudah dipakai.',2);return;
+ }
+ const q=pickQuestion(mon?'mon':'door');
+ Q={mon,door,left:10,done:false,a:q.a,e:q.e,o:q.o,q:q.q,c:q.c,expLeft:10};
+ mode='q';kd={};jv={x:0,y:0}; // gerak dimatikan selama kuis terbuka
+ $('qc').textContent=(mon?'MONSTER MENYERANG! ':'PINTU TERKUNCI - ')+q.c;$('qt').textContent=q.q;$('qf').textContent='';$('qf').style.fontWeight='normal';
+ $('qbar').style.display=mon?'block':'none';$('qbi').style.width='100%';
+ $('qCont').style.display='none';
+ // Jawaban DIACAK oleh pickQuestion()/assemble(); pemain memilih dengan klik/sentuhan saja.
+ const box=$('qo');box.innerHTML='';q.o.forEach((t,i)=>{const b=document.createElement('button');b.className='opt';b.textContent='ABCD'[i]+'. '+t;b.onclick=()=>ans(i);box.appendChild(b)});
+ $('q').classList.add('on');
+}
+function ans(i){
+ if(!Q||Q.done)return;Q.done=true; // cegah dobel-submit saat penjelasan tampil
+ const ok=i===Q.a,bs=document.querySelectorAll('.opt');
+ bs.forEach((b,j)=>{b.disabled=true;if(j===Q.a)b.classList.add('ok');else if(j===i)b.classList.add('no')});
+ if(Q.mon)$('qbar').style.display='none';
+ const mon=Q.mon,door=Q.door,correct=Q.o[Q.a],expl=escHtml(Q.e);
+ if(ok){
+  S.st.ok++;S.streak++;if(S.streak>(S.stBest||0))S.stBest=S.streak;sfx('correct');
+  let head='Nyawa aman. ',streakTxt;
+  if(!mon){door.left=12;S.st.doors++;head='Pintu terbuka 12 detik. ';setTimeout(()=>sfx('door'),120)}
+  // Regenerasi nyawa: tiap 3 benar beruntun = +1 nyawa (maks 5).
+  if(S.lives>=5)streakTxt='<br><span class="sm">🔥 Beruntun '+S.streak+'. Nyawa penuh (5/5).</span>';
+  else if(S.streak%3===0){S.lives++;healFx();streakTxt='<br><b style="color:#4ade80">🔥 3 benar beruntun! Nyawa +1 ('+S.lives+'/5).</b>'}
+  else streakTxt='<br><span class="sm">🔥 Beruntun '+S.streak+' — '+(3-S.streak%3)+' benar lagi untuk +1 nyawa.</span>';
+  $('qf').innerHTML='<b style="color:#4ade80">BENAR!</b> '+head+expl+streakTxt;
+ }else{
+  S.st.bad++;S.streak=0;
+  const pre=i<0?'<b style="color:#f87171">WAKTU HABIS!</b>':'<b style="color:#f87171">SALAH.</b>';
+  let pen='';
+  if(mon){S.lives--;dmgFx();pen='<br><b style="color:#f87171">Nyawa -1 ('+Math.max(0,S.lives)+' / 5).</b>'}
+  $('qf').innerHTML=pre+' Jawaban yang benar: <b>'+escHtml(correct)+'</b>. '+expl+pen+'<br><span class="sm">Beruntun benar direset (0).</span>';
+  sfx('wrong');
+ }
+ // Penjelasan tetap tampil sampai LANJUT ditekan atau 10 detik berlalu.
+ Q.expLeft=10;
+ const bc=$('qCont');bc.style.display='block';bc.disabled=false;$('qContT').textContent='(10s)';
+}
+function closeExpl(){
+ if(!Q||!Q.done)return;
+ const mon=Q.mon;
+ $('q').classList.remove('on');$('qCont').style.display='none';Q=null;
+ if(mon){S.inv=2.5;for(const m of M)if(Math.hypot(m.x-P.x,m.y-P.y)<4){m.stun=3;m.path=[];m.chase=0}}
+ mode='play';if(S.lives<=0)finish(false);
+}
+function finish(win){
+ mode='end';document.body.classList.remove('play');$('msg').style.display='none';$('q').classList.remove('on');AUDIO.stopBGM();sfx(win?'victory':'gameOver');clearSave();pendingRec=null;lastBoardIdx=-1;
+ flashFx(win?'#22c55e':'#ef4444',.22);
+ const score=calcScore(win),rank=rankOf(score);
+ const rows=[['Skor akhir',score+'  (Rank '+rank+')'],['Waktu tempuh',fmt(S.t)],['Nyawa tersisa',Math.max(0,S.lives)+' / 5'],['Kunci',S.keys+' / 5'],['Jawaban benar / salah',S.st.ok+' / '+S.st.bad],['Beruntun terbaik',S.stBest||0],['Pintu dibuka',S.st.doors],['Tertangkap monster',S.st.hits],['Kena spike',S.st.traps]];
+ let extra='';
+ if(win){
+  const p=pbGet();if(p===null||S.t<p){pbSet(S.t);extra='<p style="color:#4ade80"><b>PERSONAL BEST BARU!</b></p>'}else extra='<p class="sm">Personal best: '+fmt(p)+'</p>';
+  extra+='<p class="sm">Simpan hasil ini ke papan skor lokal di bawah (opsional nama, tersimpan di browser ini saja).</p>';
+  pendingRec={n:'',s:score,t:+S.t.toFixed(1),ok:S.st.ok,bad:S.st.bad,lives:Math.max(0,S.lives),keys:S.keys,streak:S.stBest||0,rank:rank,date:new Date().toISOString()};
+  $('nameIn').value=nameGet();$('bSaveScore').disabled=false;$('bSaveScore').textContent='SIMPAN KE PAPAN SKOR';
+ }else extra+='<p class="sm">Permainan berakhir — hasil tidak masuk papan skor karena permainan belum selesai (pintu keluar belum tercapai).</p>';
+ const h='<table>'+rows.map(r=>'<tr><td>'+r[0]+'</td><td><b>'+r[1]+'</b></td></tr>').join('')+'</table>'+extra;
+ $(win?'ws':'os').innerHTML=h;show(win?'win':'over');
+}
+let pausedFrom='play';
+function pause(){if(mode==='play'||mode==='q'){pausedFrom=mode;mode='pause';AUDIO.stopBGM();saveGame();show('pause')}}
+function resume(){if(mode==='pause'){mode=(pausedFrom==='q')?'q':'play';pausedFrom='play';show(null);AUDIO.ensure();AUDIO.startBGM()}}
+function togglePause(){if(mode==='pause')resume();else pause()}
+function resize(){cv.width=innerWidth;cv.height=innerHeight;cx.imageSmoothingEnabled=false;ts=Math.round(Math.max(28,Math.min(44,Math.min(innerWidth,innerHeight)/11)))}
+addEventListener('resize',resize);resize();
+const fine=matchMedia('(pointer:coarse)').matches||'ontouchstart' in window;if(fine)$('ctl').classList.add('on');
+
+addEventListener('keydown',e=>{
+ if($('settings').classList.contains('on')){if(e.code==='Escape'){show(audioReturn);e.preventDefault()}return}
+ if(e.code==='KeyM'){e.preventDefault();toggleMute();return}
+ // Di dalam kuis: TANPA shortcut keyboard untuk jawaban (A-D/1-4 ditiadakan).
+ // Jawaban hanya lewat klik/sentuhan. ESC menunda.
+ if(mode==='q'){
+    // Block A-D and 1-4 keys from submitting answers; only mouse/touch clicks allowed
+    if(e.code==='Escape'){togglePause();e.preventDefault()}
+    else if(e.code.startsWith('Key')||e.code.startsWith('Digit')){e.preventDefault();return}
+    else return
+}
+ if(mode==='pause'){if(e.code==='Escape'){togglePause();e.preventDefault()}return}
+ if((e.code==='KeyE'||e.code==='Space')&&mode==='play'){e.preventDefault();interact();return}
+ kd[e.code]=1;if(e.code.startsWith('Arrow'))e.preventDefault()
+});
+addEventListener('keyup',e=>{kd[e.code]=0});addEventListener('blur',()=>{kd={};pause()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&S&&mode!=='end')saveGame();if(document.hidden&&mode==='q'){Q._expLeftSaved=Q.expLeft}else if(!document.hidden&&Q._expLeftSaved!==undefined){Q.expLeft=Q._expLeftSaved;Q._expLeftSaved=undefined}});
+const joy=$('joy'),knob=$('knob');let jid=null;
+ function jm(e){const r=joy.getBoundingClientRect(),m=r.width/2;let dx=e.clientX-r.left-m,dy=e.clientY-r.top-m;const l=Math.hypot(dx,dy);if(l>m){dx*=m/l;dy*=m/l}jv=Math.hypot(dx,dy)<m*(settings.joyDz/100)?{x:0,y:0}:{x:dx/m,y:dy/m};knob.style.transform='translate('+dx+'px,'+dy+'px)'}
+joy.addEventListener('pointerdown',e=>{jid=e.pointerId;joy.setPointerCapture(jid);jm(e)});
+joy.addEventListener('pointermove',e=>{if(e.pointerId===jid)jm(e)});
+const je=e=>{if(e.pointerId===jid){jid=null;jv={x:0,y:0};knob.style.transform=''}};joy.addEventListener('pointerup',je);joy.addEventListener('pointercancel',je);
+$('bE').addEventListener('pointerdown',e=>{e.preventDefault();interact()});$('bP').addEventListener('pointerdown',e=>{e.preventDefault();togglePause()});
+$('bPd').addEventListener('click',togglePause);
+$('bStart').onclick=()=>{
+ clearSave();
+ const nm=($('nameIn').value||'').trim();if(nm)nameSet(nm.slice(0,16));
+ start();
+};
+$('bCont').onclick=()=>{const s=loadSave();s?start(s):start()};
+$('bHow').onclick=()=>show('how');$('bBack').onclick=()=>show('menu');$('bRes').onclick=resume;
+$('bSetMenu').onclick=()=>showSettings('menu');$('bSetPause').onclick=()=>showSettings('pause');$('bAudioBack').onclick=()=>show(audioReturn);
+$('bMute').onclick=toggleMute;$('audQ').onclick=toggleMute;
+$('volBgm').oninput=function(){AUDIO.ensure();AUDIO.setBgmVolume(+this.value/100);syncAudioUI()};
+$('volSfx').oninput=function(){AUDIO.ensure();AUDIO.setSfxVolume(+this.value/100);syncAudioUI()};
+$('volSens').oninput=function(){settings.joyDz=Math.max(10,Math.min(50,+this.value||20));$('volSensVal').textContent=settings.joyDz+'%';saveSettings()};
+[['dMudah','mudah'],['dNormal','normal'],['dSulit','sulit']].forEach(([id,d])=>{$(id).onclick=()=>{settings.difficulty=d;saveSettings();syncSettingsUI();toast('Kesulitan: '+d.toUpperCase(),1.5)}});
+$('bBoardMenu').onclick=()=>{boardReturn='menu';renderBoard();show('board')};
+$('bBoardWin').onclick=()=>{boardReturn='win';renderBoard();show('board')};
+$('bBoardBack').onclick=()=>show(boardReturn);
+$('bSaveScore').onclick=()=>{
+ if(!pendingRec)return;
+ const nm=($('nameIn').value||'').trim().slice(0,16)||'PEMAIN';
+ nameSet(nm);
+ const idx=addBoardRecord(Object.assign({},pendingRec,{n:nm}));
+ $('bSaveScore').disabled=true;pendingRec=null;
+ if(idx<0)$('bSaveScore').textContent='GAGAL DISIMPAN';
+ else{lastBoardIdx=idx;$('bSaveScore').textContent=idx<10?'TERSIMPAN ✓':'TERSIMPAN (DI LUAR 10 BESAR)'}
+};
+$('bClr').onclick=()=>{$('bClr').style.display='none';$('cf').style.display='block'};
+$('bClrNo').onclick=()=>{$('cf').style.display='none';$('bClr').style.display='block'};
+$('bClrYes').onclick=()=>{clearBoard();$('cf').style.display='none';$('bClr').style.display='block'};
+$('qCont').onclick=()=>{if(Q&&Q.done){$('qCont').disabled=true;closeExpl()}};
+['bRst','bRst2','bRst3'].forEach(i=>$(i).onclick=()=>start());['bMenu','bMenu2','bMenu3'].forEach(i=>$(i).onclick=toMenu);
+['pointerdown','keydown'].forEach(ev=>addEventListener(ev,()=>{AUDIO.ensure();if(mode==='play')AUDIO.startBGM()},{passive:true}));
+
+// --------------------------------- render ----------------------------------
+const C={f1:'#22345e',f2:'#1c2b52',w:'#050912',we:'#1e4d6b'};
+function drawSpike(info,px,py){
+ const s=info.s;
+ cx.fillStyle='#2a1218';cx.fillRect(px+1,py+1,ts-2,ts-2);
+ cx.fillStyle='#5a2530';cx.fillRect(px+3,py+3,ts-6,ts-6);
+ cx.fillStyle='#2b1016';cx.fillRect(px+5,py+5,ts-10,ts-10);
+ const bw=ts-12,bx=px+6,by=py+4,pct=Math.max(0,Math.min(1,info.remain/info.dur));
+ cx.fillStyle='#07101f';cx.fillRect(bx-1,by-1,bw+2,5);
+ cx.fillStyle=s===0?'#22d3ee':s===1?'#fbbf24':'#ef4444';cx.fillRect(bx,by,Math.max(2,Math.round(bw*pct)),3);
+ const baseY=py+ts*.78;
+ cx.fillStyle='#140a0d';for(let k=0;k<3;k++){const sx0=px+ts*(.18+.28*k);cx.fillRect(sx0,baseY-2,ts*.16,4)}
+ let ext=.12;
+ if(s===1)ext=.2+.4*(1-info.remain/info.dur);
+ else if(s===2)ext=.94+.05*Math.sin(performance.now()/60);
+ const h=ts*.62*ext;
+ for(let k=0;k<3;k++){
+  const sx0=px+ts*(.2+.28*k),sw=ts*.16;
+  cx.fillStyle=s===2?'#e2e8f0':s===1?'#fbbf24':'#94a3b8';
+  cx.beginPath();cx.moveTo(sx0,baseY);cx.lineTo(sx0+sw/2,baseY-h);cx.lineTo(sx0+sw,baseY);cx.closePath();cx.fill();
+  if(h>4){cx.fillStyle=s===2?'#ffffff':'#fde68a';cx.fillRect(sx0+sw*.42,baseY-h+1,Math.max(1,sw*.16),Math.max(1,h-3))}
+ }
+ if(s===1){cx.fillStyle='#fbbf24';cx.fillRect(px+ts*.46,py+ts*.2,3,ts*.16);cx.fillRect(px+ts*.46,py+ts*.42,3,3);cx.strokeStyle='rgba(251,191,36,'+(.35+.35*Math.sin(performance.now()/90))+')';cx.lineWidth=2;cx.strokeRect(px+2,py+2,ts-4,ts-4)}
+ if(s===2){cx.strokeStyle='rgba(239,68,68,.65)';cx.lineWidth=2;cx.strokeRect(px+2,py+2,ts-4,ts-4)}
+}
+function draw(){
+ const w=cv.width,h=cv.height;cx.fillStyle='#03060f';cx.fillRect(0,0,w,h);if(!S)return;
+ const ox=Math.round(P.x*ts-w/2),oy=Math.round(P.y*ts-h/2),x0=Math.max(0,Math.floor(ox/ts)),y0=Math.max(0,Math.floor(oy/ts)),x1=Math.min(W-1,Math.ceil((ox+w)/ts)),y1=Math.min(W-1,Math.ceil((oy+h)/ts));
+ const vis=(x,y)=>{const d=Math.hypot(x+.5-P.x,y+.5-P.y);return Math.max(0,Math.min(1,1-(d-2.2)/3.8))};
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*W+x,v=vis(x,y),e=S.ex[i];if(!e&&v<=0)continue;
+  const px=x*ts-ox,py=y*ts-oy;
+  if(G[i]){cx.fillStyle=C.w;cx.fillRect(px,py,ts,ts);cx.fillStyle=C.we;cx.fillRect(px,py,ts,2);cx.fillRect(px,py,2,ts);cx.fillStyle='#0a1226';cx.fillRect(px+4,py+4,ts-8,ts-8)}
+  else{cx.fillStyle=(x+y)&1?C.f1:C.f2;cx.fillRect(px,py,ts,ts);cx.fillStyle='#ffffff08';cx.fillRect(px+ts/2,py+ts/2,2,2)}
+  const a=1-Math.max(v,e?.4:0);if(a>0){cx.fillStyle='rgba(3,6,14,'+a+')';cx.fillRect(px,py,ts,ts)}}
+ const sx=x=>x*ts-ox,sy=y=>y*ts-oy,see=(x,y)=>S.ex[Math.floor(y)*W+Math.floor(x)];
+ for(let i=0;i<L.traps.length;i++){const tile=L.traps[i],x=tile%W,y=(tile/W)|0;if(!see(x,y))continue;drawSpike(S.spikeStates[i],sx(x),sy(y))}
+ const ex=L.ex;if(see(ex[0],ex[1])){cx.fillStyle=S.keys>=5?'#22c55e':'#3b4a5a';cx.fillRect(sx(ex[0])+3,sy(ex[1])+3,ts-6,ts-6);cx.fillStyle='#07101f';cx.fillRect(sx(ex[0])+ts*.35,sy(ex[1])+ts*.3,ts*.3,ts*.4)}
+ L.keys.forEach((k,i)=>{if(S.got.has(i)||!see(k[0],k[1]))return;const bob=Math.sin(performance.now()/250+i)*3,cx0=sx(k[0])+ts/2,cy0=sy(k[1])+ts/2+bob;cx.fillStyle='#fbbf24';cx.fillRect(cx0-ts*.28,cy0-ts*.2,ts*.2,ts*.2);cx.fillRect(cx0-ts*.12,cy0-ts*.08,ts*.4,ts*.08);cx.fillRect(cx0+ts*.18,cy0-ts*.08,ts*.08,ts*.2)});
+ for(const d of S.doors){const x=d.i%W,y=(d.i/W)|0;if(!see(x,y))continue;const px=sx(x),py=sy(y);
+  if(d.left>0){cx.fillStyle='#7a5230';cx.fillRect(px,py,ts,4);cx.fillRect(px,py+ts-4,ts,4);cx.fillStyle='#22d3ee';cx.fillRect(px,py+ts/2-2,ts*d.left/12,4)}
+  else{cx.fillStyle='#7a5230';cx.fillRect(px+1,py+1,ts-2,ts-2);cx.fillStyle='#4a2f18';cx.fillRect(px+5,py+5,ts-10,ts-10);cx.fillStyle='#22d3ee';cx.fillRect(px+ts/2-3,py+ts/2-3,6,8)}}
+ for(const m of M){if(Math.hypot(m.x-P.x,m.y-P.y)>5.2)continue;const px=sx(m.x),py=sy(m.y),r=ts*.34,b=Math.sin(performance.now()/150)*2;
+  cx.fillStyle=m.stun>0?'#555e7a':m.chase?'#c026d3':'#7c3aed';cx.fillRect(px-r,py-r+b,r*2,r*2);cx.fillRect(px-r-3,py+r-4+b,6,6);cx.fillRect(px+r-3,py+r-4+b,6,6);
+  cx.fillStyle='#fde047';cx.fillRect(px-r*.6,py-r*.4+b,r*.4,r*.4);cx.fillRect(px+r*.2,py-r*.4+b,r*.4,r*.4)}
+ if(!(S.inv>0&&Math.floor(performance.now()/100)%2)){const px=sx(P.x),py=sy(P.y),r=ts*.3;
+  cx.fillStyle=S.slow>0?'#fb923c':'#22d3ee';cx.fillRect(px-r,py-r+2,r*2,r*1.6);cx.fillStyle='#e6f7ff';cx.fillRect(px-r*.8,py-r-2,r*1.6,r*.9);cx.fillStyle='#07101f';cx.fillRect(px-r*.45,py-r*.5,3,3);cx.fillRect(px+r*.2,py-r*.5,3,3)}
+ if(S.spikeFlash>0){cx.fillStyle='rgba(239,68,68,'+(S.spikeFlash*.38)+')';cx.fillRect(0,0,w,h)}
+ $('tm').textContent=fmt(S.t);$('hp').textContent='♥'.repeat(S.lives)+'♡'.repeat(5-S.lives);$('hp').style.color='#f87171';$('ky').textContent='🔑 '+S.keys+'/5';$('stk').textContent='🔥 '+S.streak;
+ const m=mx;m.fillStyle='#000';m.fillRect(0,0,180,180);const k=4;
+ for(let y=0;y<W;y++)for(let x=0;x<W;x++)if(S.ex[y*W+x]){m.fillStyle=G[y*W+x]?'#0a1224':'#35568c';m.fillRect(x*k,y*k,k,k)}
+ for(const d of S.doors)if(S.ex[d.i]){m.fillStyle='#b4783c';m.fillRect((d.i%W)*k,((d.i/W)|0)*k,k,k)}
+ L.traps.forEach((t,i)=>{if(S.ex[t]){const info=S.spikeStates[i];m.fillStyle=info.s===2?'#ef4444':info.s===1?'#fbbf24':'#7f1d1d';m.fillRect((t%W)*k+1,((t/W)|0)*k+1,2,2)}});
+ L.keys.forEach((q,i)=>{if(!S.got.has(i)&&S.ex[q[1]*W+q[0]]){m.fillStyle='#fbbf24';m.fillRect(q[0]*k-1,q[1]*k-1,k+2,k+2)}});
+ if(S.ex[ex[1]*W+ex[0]]){m.fillStyle='#22c55e';m.fillRect(ex[0]*k-1,ex[1]*k-1,k+2,k+2)}
+ m.fillStyle='#22d3ee';m.fillRect(P.x*k-2,P.y*k-2,5,5);
+ const nd=mode==='play'?nearDoor():null;if(nd&&S.msgT<=0){$('msg').textContent=fine?'Tekan tombol E untuk soal pintu':'Tekan E / Spasi untuk soal pintu';$('msg').style.display='block'}else if(!nd&&S.msgT<=0&&$('msg').textContent.startsWith('Tekan'))$('msg').style.display='none'
+}
+function loop(t){const dt=Math.min(.05,(t-lastT)/1000||0);lastT=t;if(S)update(dt);draw();requestAnimationFrame(loop)}
+loadAudioPrefs();loadSettings();syncAudioUI();
+const VALIDATION=validateBanks();if(!VALIDATION.ok)console.warn('Question bank validation:',VALIDATION.errors);
+show('menu');requestAnimationFrame(loop);
+window.__scc={get S(){return S},get P(){return P},get M(){return M},get L(){return L},get mode(){return mode},get Q(){return Q},start,update,openQ,ans,closeExpl,interact,finish,pause,resume,pickQuestion,resetQuestions,classifyDifficulty,DIFFQ,saveGame,loadSave,clearSave,loadBoard,addBoardRecord,clearBoard,renderBoard,settings:()=>settings,DIFS:DIFFS,calcScore,rankOf,seeds:{LB_KEY,SAVE_KEY,SET_KEY},TIP,hit,mv,set P(v){P=v},validate:validateBanks,audio:AUDIO,get banks(){return{BANK,MONSTER_BANK}},get audioUI(){return{returnScreen:audioReturn}},spikeInfo,get questionState(){return{doorRng:QR_DOOR,monRng:QR_MON,posDoor:POS_DOOR,posMon:POS_MON,seenDoor:[...SEEN_DOOR],seenMon:[...SEEN_MON]}}};
+
+</script></body></html>

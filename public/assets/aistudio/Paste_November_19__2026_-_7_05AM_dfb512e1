@@ -1,0 +1,1329 @@
+# ESCAPE 1942 — PRODUCT REQUIREMENTS DOCUMENT
+
+**Version:** 2.0  
+**Status:** Revised Implementation Specification  
+**Project Type:** Browser-based 3D Educational Game  
+**Engine:** Three.js + WebGL2  
+**Build Tool:** Vite  
+**Language:** JavaScript ES Modules  
+**Platform:** Desktop Browser + Responsive Mobile Browser  
+**Historical Theme:** World War II, with emphasis on Japanese occupation of Indonesia
+
+---
+
+# 1. PROJECT OVERVIEW
+
+## 1.1 Product Description
+
+ESCAPE 1942 adalah game edukasi sejarah berbasis browser dengan perspektif first-person 3D.
+
+Pemain berperan sebagai seorang warga lokal yang terjebak di dalam kompleks pergudangan fiktif pada masa pendudukan Jepang di Indonesia. Pemain harus menemukan lima kunci akses, menjelajahi labirin, melewati pintu kuis sejarah, menghindari tentara patroli, dan menemukan salah satu dari beberapa jalur pelarian.
+
+Game menggabungkan:
+
+- First-person 3D maze exploration.
+- Retro pixel visual style.
+- Patrol and dodge mechanics.
+- Historical multiple-choice quizzes.
+- True/false questions.
+- Local progress and leaderboard.
+
+## 1.2 Main Objective
+
+Membuat versi pengembangan dari SCC Maze Challenge yang mempertahankan sistem gameplay utamanya, tetapi meningkatkan pengalaman permainan melalui:
+
+1. Migrasi dari Canvas 2D ke Three.js 3D.
+2. Perubahan ukuran maze dari 45×45 menjadi 64×64.
+3. Koridor yang lebih lebar.
+4. Beberapa jalur alternatif dan tiga jalur pelarian.
+5. Penggantian monster menjadi tentara patroli.
+6. Penambahan mekanisme dodge.
+7. Materi seluruh kuis diubah menjadi Perang Dunia II.
+8. Penambahan tipe soal True/False.
+9. Perubahan lingkungan menjadi kompleks pergudangan pada masa pendudukan Jepang.
+10. Mempertahankan sistem skor, waktu, nyawa, pengaturan, minimap, dan local save.
+
+## 1.3 Design Principles
+
+| Principle | Requirement |
+|---|---|
+| Playability First | Game harus dapat diselesaikan dari awal sampai akhir |
+| Multiple Routes | Tidak boleh hanya ada satu jalur pelarian |
+| Wide Maze | Koridor tidak boleh hanya satu sel |
+| Historical Accuracy | Fakta dan jawaban harus dapat diverifikasi |
+| Retro 3D | Dunia game harus benar-benar dirender sebagai 3D |
+| Browser Native | Tidak menggunakan Godot atau Unity |
+| Modular Code | Kode tidak boleh menumpuk dalam satu file besar |
+
+---
+
+# 2. TECHNOLOGY STACK
+
+## 2.1 Mandatory Technology
+
+| Technology | Purpose |
+|---|---|
+| HTML5 | Game shell and UI structure |
+| CSS3 | UI styling and responsive layout |
+| JavaScript ES Modules | Gameplay logic |
+| Three.js | 3D scene, camera, geometry, material, and rendering |
+| WebGL2 | Hardware-accelerated 3D rendering |
+| Vite | Development server and build system |
+| Web Audio API | Music and sound effects |
+| localStorage | Local save and settings |
+
+## 2.2 Three.js Requirements
+
+Use Three.js with:
+
+- `THREE.WebGLRenderer`
+- `THREE.Scene`
+- `THREE.PerspectiveCamera`
+- `THREE.Mesh`
+- `THREE.MeshStandardMaterial`
+- `THREE.TextureLoader`
+- `THREE.Raycaster`
+- `THREE.InstancedMesh`
+- `THREE.Clock`
+
+Use `PointerLockControls` or an equivalent first-person mouse-look controller for desktop.
+
+Use `GLTFLoader` if external 3D models are introduced.
+
+## 2.3 Rendering Requirements
+
+- Real perspective 3D.
+- First-person camera.
+- Actual 3D walls, floors, doors, objects, and NPCs.
+- Pixelated texture filtering.
+- Nearest-neighbor texture sampling.
+- Low-poly geometry.
+- Restrained lighting and shadows.
+- No fake 3D effect created using only flat Canvas 2D rendering.
+
+The renderer must check WebGL2 availability before starting.
+
+If WebGL2 is unavailable, show a readable compatibility message instead of a blank screen.
+
+## 2.4 Recommended Project Setup
+
+Use Vite with Three.js installed through npm.
+
+```bash
+npm install three
+npm install -D vite
+```
+
+Recommended scripts:
+
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}
+```
+
+Use JavaScript modules rather than placing all game logic inside one HTML file.
+
+The application must be buildable into static files inside `dist/`.
+
+---
+
+# 3. GAME STORY
+
+## 3.1 Setting
+
+**Period:** 1942–1945  
+**Location:** A fictional storage complex in the Dutch East Indies during Japanese occupation.
+
+The complex is a fictional gameplay environment inspired by the historical setting, not a reconstruction of a real prison, concentration camp, or documented military facility.
+
+## 3.2 Main Character
+
+The player represents a fictional Indonesian local resident.
+
+The player is not a real historical figure.
+
+The character's objective is to escape from the complex while discovering historical information related to World War II.
+
+## 3.3 Narrative Structure
+
+The story is presented through:
+
+- Opening illustration.
+- Short narrative text.
+- Historical notes.
+- Collected keys and optional documents.
+- Quiz checkpoints.
+- Ending illustration.
+
+The storyline may be fictional, but historical references must remain accurate.
+
+Because the quiz covers events through 1945 while the opening setting is 1942, historical questions are presented as educational knowledge for the player, not as information the fictional character necessarily knows at that moment.
+
+---
+
+# 4. MAZE GENERATION SYSTEM
+
+## 4.1 Map Dimensions
+
+**New map size: 64 × 64 cells.**
+
+The old 45×45 map must not be retained as the active gameplay map.
+
+Use a deterministic map seed so the same seed produces the same maze.
+
+Default seed: `1942`
+
+## 4.2 Corridor Width
+
+This is one of the most important changes.
+
+The previous maze generated narrow corridors, often only one cell wide. The new maze must look and feel like a proper spacious labyrinth.
+
+Requirements:
+
+| Element | New specification |
+|---|---|
+| Minimum corridor width | 2 cells |
+| Main corridor width | 3 cells |
+| Junction width | 3–4 cells |
+| Small room | 4×4 cells or larger |
+| Large room | 6×6 cells or larger |
+| Outer boundary | At least 1 solid wall cell |
+
+The maze should contain a mixture of:
+- Narrow connecting passages.
+- Wider main corridors.
+- Open intersections.
+- Storage rooms.
+- Side passages.
+- Dead ends.
+- Loop connections.
+
+Do not generate the entire map as repeated one-cell-wide corridors.
+
+## 4.3 Generation Strategy
+
+Use a logical base maze and expand it into the final 64×64 physical grid.
+
+Recommended procedure:
+
+1. Generate a 32×32 logical maze.
+2. Expand logical walkable cells into 2×2 physical cells.
+3. Create wider junctions by opening additional neighboring cells.
+4. Add multiple loop connections between branches.
+5. Create room-like spaces in selected areas.
+6. Place keys, quiz doors, guards, and exit gates.
+7. Run path validation.
+8. Regenerate if the validation fails.
+
+Do not simply upscale the old maze image. Generate new navigable world geometry.
+
+## 4.4 Multiple Route Requirement
+
+The maze must never force the player to use only one narrow escape route after collecting all keys.
+
+**Mandatory requirement: at least three independently navigable escape routes.**
+
+The three routes:
+
+| Route | Description | Gameplay character |
+|---|---|---|
+| Route A — Main Gate | Direct route through the main complex | Shorter route with quiz checkpoint |
+| Route B — Storage Passage | Route through wider storage rooms | More environmental obstacles |
+| Route C — Service Exit | Longer alternative corridor | Additional exploration and branching paths |
+
+All routes must lead to a valid ending.
+
+The routes must not collapse into one unavoidable single-cell corridor immediately before the exit.
+
+Use graph-based connectivity validation.
+
+After collecting all five keys, verify that all three exit routes are reachable.
+
+Use BFS or an equivalent graph traversal algorithm to ensure:
+- Start is reachable.
+- All five keys are reachable.
+- Quiz doors do not permanently block required progression.
+- Each exit route is reachable after unlocking.
+- No required item is trapped behind an impossible gate.
+- At least two meaningful route alternatives remain available.
+
+## 4.5 Map Distribution
+
+Distribute the maze into four visual regions:
+
+**A. Storage Depot**
+- Wooden crates.
+- Shelves.
+- Large storage rooms.
+- Initial tutorial area.
+
+**B. Administrative Section**
+- Desks.
+- Document cabinets.
+- Archive rooms.
+- Quiz doors.
+
+**C. Service Corridors**
+- Wider intersections.
+- Alternative routes.
+- Environmental obstacles.
+
+**D. Outer Complex**
+- Three exit routes.
+- Final locked gates.
+- Ending locations.
+
+These are regions inside one continuous maze, not separate levels.
+
+## 4.6 Random Generation Rules
+
+- Use a deterministic PRNG.
+- Avoid placing keys directly beside the starting point.
+- Distribute five keys across separate regions.
+- Do not place all keys in dead ends.
+- Do not put all quiz doors on one mandatory shortest path.
+- Ensure each key is reachable.
+- Ensure the exit cannot be reached prematurely.
+- Avoid placing guards directly on the player's spawn point.
+- Ensure guard spawn locations do not cause immediate unavoidable capture.
+
+---
+
+# 5. PLAYER SYSTEM
+
+## 5.1 Perspective
+
+First-person 3D camera.
+
+The player's body does not need to be visible during normal gameplay.
+
+## 5.2 Desktop Controls
+
+| Input | Action |
+|---|---|
+| W | Move forward |
+| A | Move left |
+| S | Move backward |
+| D | Move right |
+| Mouse | Look around |
+| Shift | Dodge |
+| E | Interact |
+| M | Toggle minimap |
+| ESC | Pause |
+
+Pointer lock should activate after the user explicitly starts the game.
+
+Show a small control reminder before gameplay.
+
+## 5.3 Mobile Controls
+
+Preserve the touch-friendly control concept from the original source.
+
+Provide:
+- Virtual movement joystick.
+- Drag-to-look area.
+- Interact button.
+- Dodge button.
+- Pause button.
+
+Touch controls must not overlap the quiz panel or important HUD content.
+
+## 5.4 Movement
+
+Movement must include:
+
+- Walking.
+- Forward and backward movement.
+- Strafing.
+- Collision detection.
+- Smooth camera rotation.
+- Optional head movement effect.
+
+Movement must not allow the player to pass through walls, closed quiz doors, or world boundaries.
+
+Normalize diagonal movement to prevent faster diagonal speed.
+
+---
+
+# 6. DODGE SYSTEM
+
+## 6.1 Purpose
+
+Dodge gives the player a short defensive movement action to avoid an in-game guard encounter.
+
+It is not an attack mechanic.
+
+## 6.2 Controls
+
+Desktop: `Shift`
+
+Mobile: dedicated Dodge button.
+
+## 6.3 Initial Parameters
+
+| Parameter | Initial value |
+|---|---:|
+| Dodge duration | 0.25 seconds |
+| Cooldown | 2.0 seconds |
+| Movement distance | Approximately 2 world units |
+| Temporary contact protection | 0.3 seconds |
+| Input | Current movement direction |
+
+These are gameplay tuning values and may be adjusted during testing.
+
+## 6.4 Dodge Rules
+
+- Dodge follows the player's current movement direction.
+- If no movement direction is held, use a short backward dodge.
+- Dodge must respect wall collision.
+- Dodge must not move through locked doors.
+- Dodge must not move through environmental obstacles.
+- Dodge has a visible cooldown indicator.
+- The player cannot spam dodge continuously.
+- Dodge does not cause damage to enemies.
+- Dodge does not provide a weapon or attack action.
+
+If a guard contact occurs during the brief protection window, the catch event is ignored.
+
+The feature must remain a fictional in-game movement mechanic.
+
+---
+
+# 7. GUARD / SOLDIER SYSTEM
+
+## 7.1 Enemy Replacement
+
+Replace the seven original monsters with seven guard NPCs in the initial configuration.
+
+The guards represent fictional patrol characters within the game's historical setting.
+
+They are not boss characters and cannot be attacked.
+
+## 7.2 Guard States
+
+| State | Description |
+|---|---|
+| Patrol | Moves around its assigned in-game patrol area |
+| Alert | Detects the player within the game's detection rules |
+| Chase | Follows the player through valid maze paths |
+| Return | Returns to the patrol area after losing the player |
+
+The AI must not move through walls or closed quiz doors.
+
+Keep patrol movement and detection calculations inside the game simulation.
+
+## 7.3 Guard Encounter
+
+When the player is caught outside the dodge protection window:
+
+1. Pause player movement.
+2. Display a quick historical question.
+3. Use True/False questions as the preferred encounter format.
+4. Give the player 10 seconds.
+5. Correct answer: no life penalty.
+6. Incorrect answer or timeout: lose one life.
+7. Display answer explanation.
+8. Restore gameplay with a short temporary contact-protection period.
+
+The system should not automatically remove the player from the game after a single incorrect response.
+
+## 7.4 Difficulty
+
+Three difficulty levels:
+
+**Easy**
+- Lower guard detection range.
+- Slower guard movement.
+- Longer recovery time.
+- Suitable for learning.
+
+**Normal**
+- Default guard behavior.
+- Standard detection and movement.
+
+**Hard**
+- Increased guard awareness.
+- Faster patrol movement.
+- Less time for quick questions if the quiz system supports difficulty-specific timing.
+
+Difficulty must not make the game impossible to complete.
+
+---
+
+# 8. KEY AND EXIT SYSTEM
+
+## 8.1 Keys
+
+Preserve five collectible keys.
+
+Keys are represented as historical access objects within the fictional complex.
+
+The keys must be distributed across different regions.
+
+HUD displays:
+
+`KEYS: 0/5`
+
+## 8.2 Exit Conditions
+
+Before collecting five keys:
+- All three final exit gates remain locked.
+- The player can still explore the maze.
+- The HUD indicates how many keys remain.
+
+After collecting five keys:
+- Route A becomes available.
+- Route B becomes available.
+- Route C becomes available.
+- The player may choose any of the three escape routes.
+
+Reaching any valid exit completes the game.
+
+There must not be a single forced escape route.
+
+---
+
+# 9. QUIZ DOOR SYSTEM
+
+## 9.1 Quiz Doors
+
+Preserve four quiz doors from the original game.
+
+The new doors are designed as locked checkpoints in the storage complex.
+
+## 9.2 Interaction
+
+1. Player approaches a door.
+2. An interaction hint appears.
+3. Player presses E or the mobile interaction button.
+4. Quiz panel appears.
+5. A question is displayed.
+6. Player selects an answer.
+7. Correct answer unlocks the door.
+8. Wrong answer displays an explanation and allows another attempt.
+
+## 9.3 Supported Question Types
+
+**Multiple Choice**
+- Four options.
+- Exactly one correct answer.
+
+**True/False**
+- Two options: Benar and Salah.
+- Exactly one correct answer.
+
+## 9.4 Door Behavior
+
+- Correct answer opens door for 12 seconds.
+- Wrong answer does not remove a life.
+- Show the correct answer and a short explanation.
+- Player can retry.
+- Doors must never remain permanently locked because of a wrong answer.
+- Door state must be saved.
+
+Quiz gates should not block all alternative routes at once.
+
+---
+
+# 10. HISTORICAL QUESTION BANK
+
+## 10.1 Scope
+
+All educational questions must focus on World War II.
+
+Six categories:
+
+1. Origins and Beginning of World War II.
+2. Allied and Axis Powers.
+3. European Theatre.
+4. Pacific Theatre.
+5. Japanese Occupation of Indonesia.
+6. End of World War II and Indonesia's Independence.
+
+## 10.2 Question Format
+
+Each question contains:
+- ID.
+- Type.
+- Category.
+- Difficulty.
+- Question.
+- Options.
+- Correct answer.
+- Explanation.
+- Source references.
+
+## 10.3 Initial Question Bank
+
+The initial release must include 40 verified questions:
+- 24 Multiple Choice.
+- 16 True/False.
+
+The following questions are the initial content baseline. Preserve their correct answers and explanations when generating the JSON data.
+
+### A. Multiple Choice Questions
+
+| ID | Question | Options | Answer | Explanation |
+|---|---|---|---|---|
+| MC01 | Dalam kronologi umum Perang Dunia II di Eropa, kapan perang dimulai? | A. 1914; B. 1 September 1939; C. 1941; D. 1945 | B | Jerman menginvasi Polandia pada 1 September 1939. |
+| MC02 | Negara mana yang menginvasi Polandia pada 1939? | A. Italia; B. Jepang; C. Jerman; D. Uni Soviet | C | Invasi Jerman ke Polandia memulai Perang Dunia II di Eropa. |
+| MC03 | Negara yang menyatakan perang terhadap Jerman pada 3 September 1939 adalah... | A. Inggris dan Prancis; B. Jepang dan Italia; C. Spanyol dan Portugal; D. Swedia dan Swiss | A | Inggris dan Prancis menyatakan perang setelah invasi Jerman ke Polandia. |
+| MC04 | Pakta non-agresi yang ditandatangani Jerman dan Uni Soviet pada 1939 dikenal sebagai... | A. Pakta Tripartit; B. Pakta Molotov–Ribbentrop; C. Perjanjian Versailles; D. Pakta Atlantik | B | Pakta tersebut ditandatangani pada 23 Agustus 1939. |
+| MC05 | Negara yang termasuk kekuatan Poros utama adalah... | A. Inggris, Prancis, Amerika Serikat; B. Jerman, Italia, Jepang; C. Uni Soviet, Inggris, Tiongkok; D. Amerika Serikat, Jepang, Prancis | B | Jerman, Italia, dan Jepang merupakan tiga kekuatan Poros utama. |
+| MC06 | Operasi Barbarossa merupakan invasi Jerman terhadap... | A. Prancis; B. Inggris; C. Uni Soviet; D. Polandia | C | Operasi Barbarossa dimulai pada 22 Juni 1941. |
+| MC07 | Pertempuran Stalingrad menjadi titik balik karena... | A. Jerman menguasai seluruh Eropa; B. Pasukan Jerman mengalami kekalahan besar; C. Jepang menyerah; D. Perang di Pasifik berakhir | B | Kekalahan Jerman di Stalingrad pada 1943 mengakhiri rangkaian kemenangan besar Jerman di Front Timur. |
+| MC08 | Pendaratan D-Day oleh pasukan Sekutu berlangsung di... | A. Normandy, Prancis; B. Tokyo, Jepang; C. Berlin, Jerman; D. Roma, Italia | A | Pendaratan Sekutu di Normandy pada 6 Juni 1944 membuka front besar di Eropa Barat. |
+| MC09 | Pearl Harbor berada di wilayah... | A. Filipina; B. Hawaii; C. Indonesia; D. Australia | B | Pearl Harbor merupakan pangkalan Amerika Serikat di Hawaii. |
+| MC10 | Serangan terhadap Pearl Harbor dilakukan oleh... | A. Jerman; B. Italia; C. Jepang; D. Uni Soviet | C | Jepang menyerang Pearl Harbor pada 7 Desember 1941. |
+| MC11 | Pertempuran Midway berlangsung di kawasan... | A. Samudra Atlantik; B. Samudra Pasifik; C. Laut Tengah; D. Laut Baltik | B | Pertempuran Midway merupakan pertempuran penting di kawasan Pasifik pada Juni 1942. |
+| MC12 | Kemenangan laut Amerika Serikat yang mengubah arah perang di Pasifik pada Juni 1942 adalah... | A. Pertempuran Midway; B. Pertempuran Stalingrad; C. Pertempuran Normandy; D. Pertempuran El Alamein | A | Kemenangan AS di Midway mengubah keseimbangan perang di Pasifik. |
+| MC13 | Salah satu serangan awal Jepang ke Hindia Belanda pada Januari 1942 terjadi di... | A. Tarakan; B. Yogyakarta; C. Surabaya; D. Bandung | A | Jepang menyerang Tarakan, Kalimantan Timur, pada Januari 1942. |
+| MC14 | Salah satu sumber daya yang menjadi kepentingan strategis Jepang di Hindia Belanda adalah... | A. Minyak bumi dan karet; B. Gandum dan salju; C. Kapas dan wol; D. Kopi dan teh saja | A | Hindia Belanda memiliki minyak bumi dan komoditas penting lain yang dibutuhkan Jepang. |
+| MC15 | Kapitulasi Kalijati berlangsung di wilayah... | A. Subang, Jawa Barat; B. Medan, Sumatra Utara; C. Makassar, Sulawesi Selatan; D. Denpasar, Bali | A | Perundingan penyerahan Hindia Belanda kepada Jepang berlangsung di Kalijati, Subang. |
+| MC16 | Kapitulasi Kalijati ditandatangani pada tanggal... | A. 17 Agustus 1945; B. 8 Maret 1942; C. 1 September 1939; D. 2 September 1945 | B | Kapitulasi Kalijati terjadi pada 8 Maret 1942. |
+| MC17 | Romusha pada masa pendudukan Jepang merujuk pada... | A. Kerja paksa; B. Pemilihan umum; C. Organisasi pendidikan; D. Perdagangan bebas | A | Romusha merupakan mobilisasi tenaga kerja paksa untuk mendukung kepentingan perang Jepang. |
+| MC18 | PETA merupakan singkatan dari... | A. Pembela Tanah Air; B. Persatuan Tentara Asia; C. Pemuda Tenaga Angkatan; D. Pemerintahan Tentara Asia | A | PETA adalah organisasi militer bentukan pemerintah pendudukan Jepang dengan anggota pribumi. |
+| MC19 | PUTERA merupakan singkatan dari... | A. Pusat Tentara Rakyat; B. Pusat Tenaga Rakyat; C. Persatuan Tanah Rakyat; D. Perhimpunan Tahanan Rakyat | B | PUTERA dibentuk pemerintah pendudukan Jepang pada 1943 dan dipimpin tokoh nasional Indonesia. |
+| MC20 | Salah satu tujuan Gerakan 3A adalah... | A. Menarik simpati rakyat Indonesia untuk mendukung Jepang; B. Membentuk pemerintahan Indonesia merdeka; C. Mengakhiri seluruh perang; D. Membentuk organisasi Sekutu | A | Gerakan 3A merupakan propaganda Jepang untuk memperoleh dukungan rakyat. |
+| MC21 | Kota Jepang yang dijatuhi bom atom pada 6 Agustus 1945 adalah... | A. Tokyo; B. Kyoto; C. Hiroshima; D. Osaka | C | Hiroshima dijatuhi bom atom pada 6 Agustus 1945. |
+| MC22 | Nagasaki dijatuhi bom atom pada... | A. 6 Agustus 1945; B. 9 Agustus 1945; C. 17 Agustus 1945; D. 2 September 1945 | B | Nagasaki dijatuhi bom atom pada 9 Agustus 1945. |
+| MC23 | Jepang secara resmi menandatangani penyerahan diri pada... | A. 8 Mei 1945; B. 17 Agustus 1945; C. 2 September 1945; D. 1 September 1939 | C | Jepang menandatangani dokumen penyerahan resmi pada 2 September 1945. |
+| MC24 | Proklamasi Kemerdekaan Indonesia dibacakan pada... | A. 8 Maret 1942; B. 6 Agustus 1945; C. 17 Agustus 1945; D. 2 September 1945 | C | Soekarno dan Mohammad Hatta memproklamasikan kemerdekaan pada 17 Agustus 1945. |
+
+### B. True/False Questions
+
+Gunakan dua pilihan saja: **Benar** atau **Salah**.
+
+| ID | Statement | Answer | Explanation |
+|---|---|---|---|
+| TF01 | Perang Dunia II di Eropa dimulai setelah Jerman menginvasi Polandia pada 1 September 1939. | Benar | Invasi tersebut menandai awal Perang Dunia II di Eropa. |
+| TF02 | Inggris dan Prancis menyatakan perang terhadap Jepang pada 3 September 1939 setelah invasi Polandia. | Salah | Inggris dan Prancis menyatakan perang terhadap Jerman. |
+| TF03 | Pakta Molotov–Ribbentrop merupakan pakta non-agresi antara Jerman dan Uni Soviet. | Benar | Pakta itu ditandatangani pada Agustus 1939. |
+| TF04 | Operasi Barbarossa merupakan serangan Jepang terhadap Pearl Harbor. | Salah | Operasi Barbarossa adalah invasi Jerman terhadap Uni Soviet. |
+| TF05 | Pendaratan D-Day berlangsung di Normandy, Prancis, pada 6 Juni 1944. | Benar | Pendaratan tersebut merupakan bagian dari invasi Sekutu ke Eropa Barat. |
+| TF06 | Kekalahan Jerman di Stalingrad merupakan kemenangan besar Jerman. | Salah | Pasukan Jerman mengalami kekalahan besar di Stalingrad pada Februari 1943. |
+| TF07 | Pearl Harbor diserang oleh Jepang pada 7 Desember 1941. | Benar | Serangan Jepang di Hawaii mendorong Amerika Serikat masuk ke perang melawan Jepang. |
+| TF08 | Pertempuran Midway berlangsung di Samudra Atlantik. | Salah | Pertempuran Midway berlangsung di kawasan Samudra Pasifik. |
+| TF09 | Penyerahan Hindia Belanda kepada Jepang melalui Kapitulasi Kalijati berlangsung pada 8 Maret 1942. | Benar | Kapitulasi Kalijati menandai berakhirnya kekuasaan kolonial Belanda dan dimulainya pendudukan Jepang. |
+| TF10 | Romusha merupakan mobilisasi tenaga kerja paksa pada masa pendudukan Jepang. | Benar | Tenaga kerja dikerahkan untuk berbagai kebutuhan pembangunan dan perang Jepang. |
+| TF11 | Gerakan 3A dibentuk untuk memproklamasikan kemerdekaan Indonesia. | Salah | Gerakan 3A merupakan propaganda Jepang untuk menarik dukungan rakyat Indonesia. |
+| TF12 | Jepang menandatangani penyerahan resmi pada 2 September 1945. | Benar | Penandatanganan tersebut mengakhiri Perang Dunia II secara resmi. |
+| TF13 | PETA merupakan singkatan dari Pembela Tanah Air. | Benar | PETA dibentuk pada masa pendudukan Jepang. |
+| TF14 | PUTERA merupakan singkatan dari Pusat Tenaga Rakyat. | Benar | PUTERA merupakan organisasi bentukan Jepang yang dipimpin tokoh nasional Indonesia. |
+| TF15 | Hiroshima dijatuhi bom atom pada 9 Agustus 1945, sedangkan Nagasaki pada 6 Agustus 1945. | Salah | Urutannya terbalik: Hiroshima pada 6 Agustus dan Nagasaki pada 9 Agustus. |
+| TF16 | Proklamasi Kemerdekaan Indonesia berlangsung pada 17 Agustus 1945. | Benar | Proklamasi dibacakan oleh Soekarno didampingi Mohammad Hatta. |
+
+## 10.4 Question Selection Rules
+
+- Do not repeat a question until the available pool is exhausted.
+- Shuffle option positions for multiple-choice questions.
+- Never shuffle the correct answer separately from its question.
+- True/False must display only two buttons.
+- Every answer displays an explanation.
+- Quick guard encounters should prefer True/False questions.
+- Quiz doors may use both question types.
+- Questions must not contain ambiguous wording.
+- If the question bank fails validation, show a development error rather than silently generating fake questions.
+
+## 10.5 Question Bank Validation
+
+Remove the previous category validation for Mathematics, IPS, Bahasa Indonesia, Bahasa Inggris, and General Knowledge.
+
+Replace it with validation for:
+- 40 initial questions.
+- 24 multiple-choice questions.
+- 16 true/false questions.
+- Six historical categories.
+- Non-empty questions.
+- Valid answer keys.
+- Valid explanations.
+- No duplicate IDs.
+- No duplicate question text.
+- Source references for historical claims.
+
+---
+
+# 11. HUD AND UI SYSTEM
+
+## 11.1 Main HUD
+
+Display:
+- Timer.
+- Remaining lives.
+- Key counter.
+- Best answer streak.
+- Dodge cooldown.
+- Audio status.
+- Minimap toggle.
+- Pause button.
+
+## 11.2 Minimap
+
+Use an HTML canvas or DOM-based map overlay.
+
+Requirements:
+- Hand-drawn visual style.
+- Player location.
+- Discovered walls and corridors.
+- Collected keys.
+- Quiz door locations when discovered.
+- Three exit markers after they become available.
+
+The minimap should reveal explored areas progressively.
+
+Do not reveal the entire maze immediately.
+
+## 11.3 Quiz UI
+
+Multiple Choice:
+- Question title.
+- Category label.
+- Four answer buttons.
+- Correct/wrong feedback.
+- Explanation.
+- Continue button.
+
+True/False:
+- Question title.
+- Two large buttons.
+- Benar.
+- Salah.
+- Explanation.
+
+Quick Guard Encounter:
+- 10-second countdown.
+- Question.
+- Two answer buttons for True/False.
+- Result and explanation.
+
+## 11.4 Hand-drawn Theme
+
+Use hand-drawn artwork for:
+- Main menu background.
+- Opening screen.
+- Historical Journal.
+- Minimap.
+- Document illustrations.
+- Loading screen.
+- Ending illustration.
+
+The actual maze remains 3D.
+
+Do not replace the real 3D maze with a static illustration.
+
+---
+
+# 12. SCORING AND GAME PROGRESSION
+
+## 12.1 Lives
+
+Starting lives: 5.
+
+- Wrong answers on quiz doors do not remove lives.
+- Wrong or timed-out quick guard questions remove one life.
+- Three consecutive correct answers restore one life.
+- Maximum lives: 5.
+
+## 12.2 Score
+
+Preserve the original scoring model as the starting point:
+
+Score = (Correct × 100) + (Keys × 150) + (Remaining Lives × 50) + (Best Streak × 20) − (Wrong × 30) + (Win Bonus 400).
+
+Rank:
+
+| Rank | Score |
+|---|---:|
+| S | 1700+ |
+| A | 1300+ |
+| B | 950+ |
+| C | 650+ |
+| D | 380+ |
+| E | Below 380 |
+
+Review the rank thresholds after balancing the new maze.
+
+## 12.3 Victory
+
+The player wins by:
+1. Collecting all five keys.
+2. Unlocking the three escape routes.
+3. Reaching any one of the three valid exit locations.
+
+The victory screen displays:
+- Completion time.
+- Final score.
+- Rank.
+- Remaining lives.
+- Keys collected.
+- Correct and incorrect answers.
+- Best streak.
+- Dodge count.
+- Selected escape route.
+
+## 12.4 Game Over
+
+Game Over occurs when the player's lives reach zero.
+
+Provide:
+- Retry.
+- Main Menu.
+- Result summary.
+
+---
+
+# 13. LOCAL SAVE AND SETTINGS
+
+No login is required.
+
+Use browser localStorage for:
+- Current save state.
+- Player progress.
+- Map seed.
+- Key collection.
+- Opened quiz doors.
+- Explored cells.
+- Guard state if needed.
+- Elapsed time.
+- Lives.
+- Settings.
+- Local leaderboard.
+
+Save data must include a version number.
+
+Example:
+
+```json
+{
+  "version": 2,
+  "seed": 1942,
+  "elapsedTime": 0,
+  "lives": 5,
+  "collectedKeys": [],
+  "openedDoors": [],
+  "exploredCells": [],
+  "player": {
+    "x": 2,
+    "y": 2,
+    "rotation": 0
+  },
+  "selectedExit": null
+}
+```
+
+Settings:
+- Music volume.
+- SFX volume.
+- Mouse sensitivity.
+- Difficulty.
+- Fullscreen.
+- Graphics quality.
+
+Autosave:
+- Every 5 seconds.
+- When paused.
+- When returning to menu.
+- After key collection.
+- After opening a quiz door.
+
+Store leaderboard locally. Do not imply that it is a global leaderboard.
+
+---
+
+# 14. PERFORMANCE REQUIREMENTS
+
+The project is a browser-based 3D game. Rendering performance is important.
+
+Requirements:
+- Use InstancedMesh for repeated wall and floor meshes where practical.
+- Avoid creating thousands of separate draw calls.
+- Use small texture files.
+- Use nearest filtering for pixel textures.
+- Limit dynamic lights.
+- Avoid unnecessary real-time shadows.
+- Use delta time for movement and animation.
+- Dispose of unused geometry and materials.
+- Do not rebuild the entire maze every frame.
+- Use efficient collision and pathfinding.
+
+Initial targets:
+- 60 FPS on a reasonable desktop browser.
+- 30 FPS minimum target on tested lower-performance devices.
+- Stable gameplay after opening and closing quiz panels.
+- No memory leak from repeated game restarts.
+
+Provide quality settings:
+- Low.
+- Medium.
+- High.
+
+---
+
+# 15. PROJECT STRUCTURE
+
+Use a modular Vite project.
+
+```text
+ESCAPE-1942/
+├── index.html
+├── package.json
+├── vite.config.js
+│
+├── public/
+│   └── assets/
+│       ├── textures/
+│       ├── models/
+│       ├── handdrawn/
+│       ├── audio/
+│       └── fonts/
+│
+├── src/
+│   ├── main.js
+│   │
+│   ├── core/
+│   │   ├── Game.js
+│   │   ├── GameState.js
+│   │   ├── Renderer.js
+│   │   ├── SceneManager.js
+│   │   └── InputManager.js
+│   │
+│   ├── maze/
+│   │   ├── MazeGenerator.js
+│   │   ├── MazeValidator.js
+│   │   ├── Pathfinding.js
+│   │   ├── MazeRenderer.js
+│   │   └── RouteManager.js
+│   │
+│   ├── player/
+│   │   ├── PlayerController.js
+│   │   ├── CameraController.js
+│   │   ├── Collision.js
+│   │   └── DodgeController.js
+│   │
+│   ├── guards/
+│   │   ├── Guard.js
+│   │   ├── GuardAI.js
+│   │   └── GuardManager.js
+│   │
+│   ├── gameplay/
+│   │   ├── KeyManager.js
+│   │   ├── QuizDoor.js
+│   │   ├── ExitManager.js
+│   │   ├── EncounterManager.js
+│   │   └── ScoreManager.js
+│   │
+│   ├── questions/
+│   │   ├── QuestionManager.js
+│   │   └── QuestionValidator.js
+│   │
+│   ├── systems/
+│   │   ├── SaveManager.js
+│   │   ├── AudioManager.js
+│   │   └── SettingsManager.js
+│   │
+│   ├── ui/
+│   │   ├── HUD.js
+│   │   ├── Minimap.js
+│   │   ├── QuizUI.js
+│   │   ├── MenuUI.js
+│   │   ├── PauseUI.js
+│   │   └── ResultUI.js
+│   │
+│   └── data/
+│       ├── questions.js
+│       ├── keys.js
+│       └── mazeConfig.js
+│
+├── styles/
+│   ├── main.css
+│   ├── hud.css
+│   ├── quiz.css
+│   └── menu.css
+│
+└── docs/
+    ├── PRD.md
+    ├── DESIGN.md
+    ├── IMPLEMENTATION.md
+    ├── HISTORICAL_REFERENCE.md
+    ├── ASSET_GUIDELINES.md
+    ├── TASKS.md
+    └── CHANGELOG.md
+```
+
+---
+
+# 16. MIGRATION PLAN FROM index(2).html
+
+## 16.1 Migration Principle
+
+Do not discard the old game logic.
+
+Preserve the original file as a reference and migrate reusable logic into modular JavaScript files.
+
+The existing source uses:
+- Canvas 2D rendering.
+- A 45×45 grid.
+- Seeded DFS maze generation.
+- BFS pathfinding.
+- Five keys.
+- Four quiz doors.
+- Seven monsters.
+- Twelve spike traps.
+- Timer.
+- Lives.
+- Score and streak.
+- Leaderboard.
+- Settings.
+- Local save.
+- Web Audio synthesis.
+- Desktop keyboard input and mobile joystick.
+
+The new implementation must preserve useful behavior while changing the rendering and maze structure.
+
+## 16.2 Migration Mapping
+
+| Old implementation | New implementation |
+|---|---|
+| Canvas 2D renderer | Three.js WebGLRenderer |
+| `layout(seed)` | New 64×64 MazeGenerator |
+| `bfs()` | Pathfinding.js |
+| `draw()` | MazeRenderer.js |
+| 2D Player coordinates | 3D world coordinates |
+| Monster | Guard NPC |
+| Five keys | Five access keys |
+| Four quiz doors | Four historical quiz doors |
+| Monster quick quiz | Guard encounter quiz |
+| Spike traps | Historical environmental obstacles |
+| Keyboard movement | First-person controller |
+| Mobile joystick | Mobile joystick + look controls |
+| `nearDoor()` | 3D proximity/raycast interaction |
+| Canvas minimap | Hand-drawn HTML minimap |
+| localStorage save | Versioned localStorage save |
+| Web Audio | AudioManager using Web Audio API |
+| Old BANK | WWII question data |
+| Old MONSTER_BANK | Quick True/False pool or filtered shared question bank |
+| Score calculation | Adapted ScoreManager |
+| Settings | New SettingsManager |
+
+## 16.3 Old Validation to Replace
+
+The old question validator expects:
+- 240 questions in the main bank.
+- 40 questions in the monster bank.
+- Six unrelated school subject categories.
+
+These validation rules must be removed.
+
+Replace them with the new requirement:
+- 24 multiple-choice questions.
+- 16 true/false questions.
+- Six WWII categories.
+- Valid answer and explanation.
+- Source references.
+- Unique question IDs.
+
+Do not leave old mathematics or other unrelated subjects inside the game.
+
+## 16.4 Rendering Migration
+
+The old `draw()` function is Canvas 2D and must not remain the primary world renderer.
+
+Create a real Three.js scene.
+
+Required:
+- Scene.
+- Perspective camera.
+- WebGL renderer.
+- Floor meshes.
+- Wall meshes.
+- Door meshes.
+- Key meshes.
+- Guard models.
+- Environment props.
+- Lighting.
+
+Use the 64×64 maze array as the source of world geometry.
+
+A grid cell maps to a 3D world position.
+
+```text
+Grid coordinate:
+(x, y)
+
+3D world:
+(x * cellSize, 0, y * cellSize)
+```
+
+Keep map data separate from meshes.
+
+The same grid data must be used by:
+- Renderer.
+- Player collision.
+- Guard pathfinding.
+- Minimap.
+- Route validation.
+- Collectible placement.
+
+## 16.5 Preserve Legacy Reference
+
+Do not delete or overwrite the original HTML file.
+
+Create a separate legacy backup:
+
+```text
+legacy/
+└── index-legacy.html
+```
+
+The new Vite application must be developed separately and then integrated after the first prototype is working.
+
+---
+
+# 17. IMPLEMENTATION MILESTONES
+
+Do not implement the entire game in a single uncontrolled code-generation step.
+
+## Milestone 1 — Browser 3D Foundation
+
+Build:
+- Vite setup.
+- Three.js installation.
+- WebGL2 renderer.
+- Scene and camera.
+- First-person controller.
+- One test corridor.
+- Wall collision.
+
+Acceptance:
+- Game runs in browser.
+- Real 3D scene appears.
+- Player moves and looks around.
+- Player cannot pass through walls.
+
+## Milestone 2 — New Maze Generator
+
+Build:
+- 64×64 grid.
+- Wider corridors.
+- Rooms and junctions.
+- Loop connections.
+- Three exit route candidates.
+- BFS validation.
+
+Acceptance:
+- Maze has multiple branches.
+- Main corridors are at least two cells wide.
+- At least three escape routes are validated.
+- No impossible or isolated required items.
+
+## Milestone 3 — Main Gameplay
+
+Build:
+- Five keys.
+- Four quiz doors.
+- Exit route unlocking.
+- HUD.
+- Minimap.
+- Timer.
+- Score.
+
+Acceptance:
+- All keys can be collected.
+- All doors can be opened.
+- All three escape routes can be reached after unlocking.
+
+## Milestone 4 — Guard and Dodge
+
+Build:
+- Seven guard NPCs.
+- Patrol state.
+- Alert state.
+- Chase state.
+- Return state.
+- Dodge mechanic.
+- Guard encounter quiz.
+
+Acceptance:
+- Guards respect walls.
+- Dodge respects collision.
+- Dodge cooldown works.
+- Guard encounters do not break gameplay.
+- Quick quizzes work.
+
+## Milestone 5 — Question Bank
+
+Build:
+- 24 MCQ.
+- 16 True/False.
+- Answer randomization.
+- Question selection.
+- Explanations.
+- Historical source references.
+
+Acceptance:
+- No empty questions.
+- Correct answers are preserved after shuffling.
+- No duplicates.
+- Quick guard questions use True/False when available.
+
+## Milestone 6 — Save, Audio, and Polish
+
+Build:
+- Local save.
+- Settings.
+- Audio.
+- Leaderboard.
+- Menu and journal illustrations.
+- Responsive controls.
+
+Acceptance:
+- Save and load work.
+- Restart works.
+- Settings persist.
+- No blocking errors.
+
+## Milestone 7 — Full QA
+
+Test:
+- Maze solvability.
+- All three exit routes.
+- Guard behavior.
+- Dodge cooldown.
+- Quiz behavior.
+- Score and lives.
+- Local save.
+- Desktop and mobile browser.
+- Performance.
+- Historical accuracy.
+
+---
+
+# 18. ACCEPTANCE CRITERIA
+
+The project is not complete until all of the following work:
+
+- [ ] Browser-based 3D using Three.js and WebGL2.
+- [ ] First-person camera.
+- [ ] 64×64 maze.
+- [ ] Minimum two-cell corridor width.
+- [ ] Wider junctions and rooms.
+- [ ] Three playable escape routes.
+- [ ] Five collectible keys.
+- [ ] Four quiz doors.
+- [ ] Seven guard NPCs.
+- [ ] Dodge mechanic.
+- [ ] Multiple-choice question support.
+- [ ] True/False question support.
+- [ ] 40 initial historical questions.
+- [ ] Historical explanations.
+- [ ] Local save and leaderboard.
+- [ ] Desktop controls.
+- [ ] Responsive mobile controls.
+- [ ] Menu and hand-drawn visual elements.
+- [ ] No critical JavaScript errors.
+- [ ] Game can be completed from start to finish.
+
+---
+
+# 19. OUT OF SCOPE
+
+Do not add these features during the initial release:
+
+- Online multiplayer.
+- Global account system.
+- Cloud save.
+- Real-time online leaderboard.
+- Weapon combat.
+- Complex military simulation.
+- Multiple playable characters.
+- Procedural narrative generation.
+- Large open-world maps.
+- Backend services that are not required by gameplay.
+
+Focus on delivering a complete and stable browser game first.
+
+---
+
+# 20. HISTORICAL SOURCE REFERENCES
+
+Use the following sources to validate educational content.
+
+| ID | Reference |
+|---|---|
+| USHMM-01 | https://encyclopedia.ushmm.org/content/id/article/world-war-ii-key-dates |
+| USHMM-02 | https://encyclopedia.ushmm.org/content/id/article/world-war-ii-in-the-pacific |
+| USHMM-03 | https://encyclopedia.ushmm.org/content/id/article/invasion-of-the-soviet-union-june-1941 |
+| USHMM-04 | https://encyclopedia.ushmm.org/content/en/timeline-event/holocaust/1942-1945/german-defeat-at-stalingrad |
+| KEMBUD-01 | https://esi.kemenbud.go.id/wiki/Kapitulasi_Kalijati |
+| KEMBUD-02 | https://esi.kemenbud.go.id/wiki/Romusha |
+| KEMBUD-03 | https://esi.kemenbud.go.id/wiki/Pembela_Tanah_Air_%28PETA%29 |
+| KEMBUD-04 | https://esi.kemenbud.go.id/wiki/Pusat_Tenaga_Rakyat_%28PUTERA%29 |
+| ANNE-FRANK-01 | https://www.annefrank.org/en/timeline/104/japan-occupies-the-dutch-east-indies/ |
+| RIJKSMUSEUM-01 | https://www.rijksmuseum.nl/en/collection/node/Independence-of-Indonesia--56fe29e760764c56bd04d0c894370bf1 |
+| KOMPAS-01 | https://amp.kompas.com/skola/read/2020/01/12/130000169/gerakan-tiga-a-dan-propaganda-jepang |
+
+Do not use AI-generated historical claims without verification.
+
+---
+
+# 21. INSTRUCTIONS FOR GOOGLE AI STUDIO
+
+You are the primary implementation agent for ESCAPE 1942.
+
+Follow these instructions:
+
+1. Read this PRD completely before changing source code.
+2. Inspect the existing `index(2).html` file and understand its game logic.
+3. Preserve the original file as a legacy reference.
+4. Do not switch to Godot, Unity, or another native game engine.
+5. Use Vite, JavaScript ES Modules, Three.js, and WebGL2.
+6. Replace the old Canvas 2D game renderer with a real 3D renderer.
+7. Keep UI and quiz panels in HTML/CSS unless a 3D implementation is genuinely required.
+8. Use the 64×64 maze specification.
+9. Implement wide corridors and multiple independently navigable exit routes.
+10. Do not reuse the old single-route door placement logic without modification.
+11. Preserve and adapt existing score, lives, timer, audio, settings, and save logic.
+12. Remove all unrelated question categories.
+13. Use the supplied WWII question bank as the initial content source.
+14. Never fabricate historical answers.
+15. Implement dodge as a game-only movement mechanic, not a combat feature.
+16. Do not create fake buttons or placeholder functionality that appears complete.
+17. Work in milestones rather than generating the entire project in one uncontrolled operation.
+18. Before modifying a file, inspect its current content.
+19. Keep modules separated by responsibility.
+20. Test each milestone before continuing.
+21. Update `CHANGELOG.md` and `TASKS.md` after implementation changes.
+22. Do not remove working functionality without replacing it.
+
+## First Task
+
+Start with Milestone 1 only.
+
+First:
+- Audit the existing HTML source.
+- Create the Vite project structure.
+- Install Three.js.
+- Implement WebGLRenderer.
+- Implement the first-person camera and movement.
+- Create a simple 3D corridor.
+- Implement wall collision.
+
+Do not generate the entire maze or all assets yet.
+
+Report the files created, the architecture, and the tests performed.
+
+**Definition of Done:** A player can move and look around a real 3D corridor in a browser without walking through walls.
+
+---
+
+# FINAL PRODUCT PRINCIPLE
+
+ESCAPE 1942 must remain a browser-based 3D maze game with meaningful route choices, interactive historical questions, and retro visual identity.
+
+**The maze must be fun to explore, the escape routes must be genuinely alternative, and the historical information must be accurate.**
